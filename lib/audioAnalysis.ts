@@ -1,0 +1,177 @@
+/**
+ * Core audio analysis: tempo (BPM) detection and musical key detection,
+ * built entirely on top of fft.ts. Same underlying algorithms as the
+ * Python version (spectral-flux onset detection + autocorrelation for
+ * tempo; chroma features + Krumhansl-Schmuckler correlation for key),
+ * reimplemented from scratch since there's no librosa in the browser.
+ *
+ * Every function here takes raw PCM samples (a Float32Array) and a
+ * sample rate - agnostic to HOW the audio was decoded, so these are
+ * easy to unit-test outside a browser (no Web Audio API dependency).
+ */
+
+import { fft, magnitudeSpectrum, nextPowerOf2 } from "./fft";
+
+const FRAME_SIZE = 2048;
+const HOP_SIZE = 512;
+
+function hannWindow(size: number): Float32Array {
+  const w = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    w[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (size - 1)));
+  }
+  return w;
+}
+
+const HANN = hannWindow(FRAME_SIZE);
+
+/**
+ * Splits audio into overlapping windows, applies a Hann window (tapers
+ * each frame's edges to avoid spectral leakage artifacts), and returns
+ * the magnitude spectrum for each frame - this is a Short-Time Fourier
+ * Transform (STFT): an FFT repeated over a sliding window through time,
+ * which is how you analyze frequency content of a signal that changes
+ * over time (which all music does).
+ */
+function computeSTFT(samples: Float32Array): number[][] {
+  const spectra: number[][] = [];
+  const padded = nextPowerOf2(FRAME_SIZE);
+
+  for (let start = 0; start + FRAME_SIZE <= samples.length; start += HOP_SIZE) {
+    const frame = new Float32Array(padded);
+    for (let i = 0; i < FRAME_SIZE; i++) {
+      frame[i] = samples[start + i] * HANN[i];
+    }
+    const spectrum = magnitudeSpectrum(fft(frame));
+    // Only keep the first half (real-valued input signals produce a
+    // mirrored, redundant second half of the spectrum).
+    spectra.push(spectrum.slice(0, padded / 2));
+  }
+
+  return spectra;
+}
+
+export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: number; confidence: number } {
+  const spectra = computeSTFT(samples);
+
+  // Spectral flux: how much MORE energy is in this frame vs the last
+  // one, summed across all frequency bins, with negative changes
+  // zeroed out ("half-wave rectified"). This spikes sharply on
+  // percussive hits (kick/snare) and stays low during sustained,
+  // steady sound - exactly what marks a rhythmic "onset".
+  const onsetEnvelope: number[] = [0];
+  for (let t = 1; t < spectra.length; t++) {
+    let flux = 0;
+    for (let bin = 0; bin < spectra[t].length; bin++) {
+      const diff = spectra[t][bin] - spectra[t - 1][bin];
+      if (diff > 0) flux += diff;
+    }
+    onsetEnvelope.push(flux);
+  }
+
+  const frameRate = sampleRate / HOP_SIZE; // onset envelope samples per second
+
+  // Autocorrelate the onset envelope against itself at different time
+  // lags. The lag with the strongest self-similarity IS the beat
+  // period - a song's rhythm is, by definition, a pattern that
+  // repeats at a consistent interval.
+  const minBpm = 60, maxBpm = 200;
+  const minLag = Math.floor(frameRate * (60 / maxBpm));
+  const maxLag = Math.ceil(frameRate * (60 / minBpm));
+
+  let bestLag = minLag;
+  let bestScore = -Infinity;
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let score = 0;
+    for (let i = 0; i + lag < onsetEnvelope.length; i++) {
+      score += onsetEnvelope[i] * onsetEnvelope[i + lag];
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestLag = lag;
+    }
+  }
+
+  const bpm = 60 / (bestLag / frameRate);
+  return { bpm, confidence: bestScore };
+}
+
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+// Krumhansl-Kessler key profiles - published cognitive-science reference
+// data (not invented for this project), same values used in the Python version.
+const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+const MINOR_PROFILE = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+
+function frequencyToPitchClass(freq: number): number {
+  if (freq <= 0) return -1;
+  // MIDI note number formula: A4 (440Hz) = MIDI note 69.
+  const midi = 69 + 12 * Math.log2(freq / 440);
+  const pitchClass = ((Math.round(midi) % 12) + 12) % 12;
+  return pitchClass;
+}
+
+function correlation(a: number[], b: number[]): number {
+  const n = a.length;
+  const meanA = a.reduce((s, v) => s + v, 0) / n;
+  const meanB = b.reduce((s, v) => s + v, 0) / n;
+  let num = 0, denomA = 0, denomB = 0;
+  for (let i = 0; i < n; i++) {
+    num += (a[i] - meanA) * (b[i] - meanB);
+    denomA += (a[i] - meanA) ** 2;
+    denomB += (b[i] - meanB) ** 2;
+  }
+  return num / (Math.sqrt(denomA) * Math.sqrt(denomB) || 1);
+}
+
+export function detectKey(samples: Float32Array, sampleRate: number): { key: string; mode: "major" | "minor"; confidence: number } {
+  const spectra = computeSTFT(samples);
+  const padded = nextPowerOf2(FRAME_SIZE);
+
+  // Build a 12-bin chroma vector: for every FFT bin in every frame,
+  // figure out which pitch class (C, C#, D, ...) that frequency
+  // belongs to, and accumulate its energy there - collapsing all
+  // octaves of "C" together, all octaves of "E" together, etc.
+  const chroma = new Array(12).fill(0);
+  for (const spectrum of spectra) {
+    for (let bin = 1; bin < spectrum.length; bin++) {
+      const freq = (bin * sampleRate) / padded;
+      if (freq < 60 || freq > 5000) continue; // ignore sub-bass rumble and non-musical high hiss
+      const pc = frequencyToPitchClass(freq);
+      if (pc >= 0) chroma[pc] += spectrum[bin];
+    }
+  }
+
+  let bestScore = -Infinity;
+  let bestKey = "C";
+  let bestMode: "major" | "minor" = "major";
+
+  // Rotate via explicit modular indexing (matches numpy's roll semantics
+  // exactly: rotated[i] = profile[(i - tonic) mod 12]). Deliberately NOT
+  // using Array.slice(-tonic) here - when tonic is 0, "-tonic" becomes
+  // JavaScript's negative zero, and slice(-0) is NOT treated as a negative
+  // index (per spec, -0 < 0 is false), so it silently produces a wrong,
+  // double-length array instead of throwing an error. Modular indexing
+  // sidesteps that footgun entirely.
+  for (let tonic = 0; tonic < 12; tonic++) {
+    const rotateIndex = (i: number) => ((i - tonic) % 12 + 12) % 12;
+    const majorRotated = Array.from({ length: 12 }, (_, i) => MAJOR_PROFILE[rotateIndex(i)]);
+    const minorRotated = Array.from({ length: 12 }, (_, i) => MINOR_PROFILE[rotateIndex(i)]);
+
+    const majorScore = correlation(chroma, majorRotated);
+    const minorScore = correlation(chroma, minorRotated);
+
+    if (majorScore > bestScore) {
+      bestScore = majorScore;
+      bestKey = NOTE_NAMES[tonic];
+      bestMode = "major";
+    }
+    if (minorScore > bestScore) {
+      bestScore = minorScore;
+      bestKey = NOTE_NAMES[tonic];
+      bestMode = "minor";
+    }
+  }
+
+  return { key: bestKey, mode: bestMode, confidence: bestScore };
+}
