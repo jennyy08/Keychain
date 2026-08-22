@@ -163,24 +163,36 @@ function correlation(a: number[], b: number[]): number {
 export function detectKey(samples: Float32Array, sampleRate: number): { key: string; mode: "major" | "minor"; confidence: number } {
   const spectra = computeSTFT(samples);
   const padded = nextPowerOf2(FRAME_SIZE);
+  if (!spectra.length) return { key: "C", mode: "major", confidence: 0 };
 
   // Build a 12-bin chroma vector: for every FFT bin in every frame,
-  // figure out which pitch class (C, C#, D, ...) that frequency
-  // belongs to, and accumulate its energy there - collapsing all
-  // octaves of "C" together, all octaves of "E" together, etc.
+  // figure out which pitch class it belongs to. We retain a profile for each
+  // frame before pooling so quiet transitions cannot steer the final key.
   const chroma = new Array(12).fill(0);
+  const frameChromas: { values: number[]; energy: number }[] = [];
   for (const spectrum of spectra) {
+    const values = new Array(12).fill(0);
+    let energy = 0;
     for (let bin = 1; bin < spectrum.length; bin++) {
       const freq = (bin * sampleRate) / padded;
-      if (freq < 60 || freq > 5000) continue; // ignore sub-bass rumble and non-musical high hiss
+      if (freq < 60 || freq > 5000) continue;
       const pc = frequencyToPitchClass(freq);
-      if (pc >= 0) chroma[pc] += spectrum[bin];
+      const magnitude = spectrum[bin];
+      if (pc >= 0) values[pc] += magnitude;
+      energy += magnitude;
     }
+    frameChromas.push({ values, energy });
   }
 
-  let bestScore = -Infinity;
-  let bestKey = "C";
-  let bestMode: "major" | "minor" = "major";
+  // Retain the musically active 65% of frames. This keeps material from
+  // across the track while rejecting low-energy intros, outros, and breaks.
+  const sortedEnergy = frameChromas.map((frame) => frame.energy).sort((a, b) => a - b);
+  const activityThreshold = sortedEnergy[Math.floor(sortedEnergy.length * 0.35)] ?? 0;
+  for (const frame of frameChromas) {
+    if (frame.energy < activityThreshold || frame.energy === 0) continue;
+    for (let pc = 0; pc < 12; pc++) chroma[pc] += frame.values[pc] / frame.energy;
+  }
+  const candidates: { key: string; mode: "major" | "minor"; score: number }[] = [];
 
   // Rotate via explicit modular indexing (matches numpy's roll semantics
   // exactly: rotated[i] = profile[(i - tonic) mod 12]). Deliberately NOT
@@ -197,17 +209,17 @@ export function detectKey(samples: Float32Array, sampleRate: number): { key: str
     const majorScore = correlation(chroma, majorRotated);
     const minorScore = correlation(chroma, minorRotated);
 
-    if (majorScore > bestScore) {
-      bestScore = majorScore;
-      bestKey = NOTE_NAMES[tonic];
-      bestMode = "major";
-    }
-    if (minorScore > bestScore) {
-      bestScore = minorScore;
-      bestKey = NOTE_NAMES[tonic];
-      bestMode = "minor";
-    }
+    candidates.push({ key: NOTE_NAMES[tonic], mode: "major", score: majorScore });
+    candidates.push({ key: NOTE_NAMES[tonic], mode: "minor", score: minorScore });
   }
 
-  return { key: bestKey, mode: bestMode, confidence: bestScore };
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0];
+  const secondBest = candidates[1];
+  // Confidence combines how well the winner fits a profile with how
+  // decisively it beats the nearest alternate key.
+  const profileFit = Math.max(0, Math.min(1, (best.score + 1) / 2));
+  const separation = Math.max(0, Math.min(1, (best.score - secondBest.score) / 0.2));
+  const confidence = Math.round((profileFit * 0.55 + separation * 0.45) * 100) / 100;
+  return { key: best.key, mode: best.mode, confidence };
 }
