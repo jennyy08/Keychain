@@ -5,7 +5,7 @@ import { detectKey, detectTempo } from "@/lib/audioAnalysis";
 import { camelotCompatibility, tempoAdjustment, toCamelot } from "@/lib/camelot";
 import { decodeAudioFile } from "@/lib/decodeAudio";
 
-type TrackResult = { fileName: string; bpm: number; key: string; mode: string; camelot: string; keyConfidence: number; duration: number };
+type TrackResult = { fileName: string; bpm: number; tempoConfidence?: number; key: string; mode: string; camelot: string; keyConfidence: number; duration: number };
 type SavedComparison = { id: string; savedAt: string; trackA: TrackResult; trackB: TrackResult; compatible: boolean; reason: string };
 const AUDIO_EXTENSIONS = /\.(mp3|wav|m4a|aac|ogg|flac)$/i;
 const LIBRARY_KEY = "keychain-comparisons-v1";
@@ -56,7 +56,8 @@ function TrackSlot({ label, file, disabled, onFile, onClear }: { label: "A" | "B
   </section>;
 }
 function ResultCard({ result, label }: { result: TrackResult; label: "A" | "B" }) {
-  return <article className="result-card"><div className="result-topline"><span>Track {label}</span><span>{formatDuration(result.duration)}</span></div><p className="result-name" title={result.fileName}>{result.fileName}</p><div className="metrics"><div><span className="metric-value">{result.bpm.toFixed(1)}</span><span className="metric-label">BPM</span></div><div className="key-metric"><span className="key-value">{result.key} <em>{result.mode}</em></span><span className="metric-label">Musical key</span></div><div className="camelot-badge"><span>{result.camelot}</span><small>Camelot</small></div></div><div className="confidence"><span>Key confidence</span><div><i style={{ width: `${Math.round(result.keyConfidence * 100)}%` }} /></div><b>{Math.round(result.keyConfidence * 100)}%</b></div></article>;
+  const tempoConfidence = result.tempoConfidence ?? 0;
+  return <article className="result-card"><div className="result-topline"><span>Track {label}</span><span>{formatDuration(result.duration)}</span></div><p className="result-name" title={result.fileName}>{result.fileName}</p><div className="metrics"><div><span className="metric-value">{result.bpm.toFixed(1)}</span><span className="metric-label">BPM</span></div><div className="key-metric"><span className="key-value">{result.key} <em>{result.mode}</em></span><span className="metric-label">Musical key</span></div><div className="camelot-badge"><span>{result.camelot}</span><small>Camelot</small></div></div><div className="confidence"><span>Tempo confidence</span><div><i style={{ width: `${Math.round(tempoConfidence * 100)}%` }} /></div><b>{Math.round(tempoConfidence * 100)}%</b></div><div className="confidence"><span>Key confidence</span><div><i style={{ width: `${Math.round(result.keyConfidence * 100)}%` }} /></div><b>{Math.round(result.keyConfidence * 100)}%</b></div></article>;
 }
 function SavedComparisonCard({ item, onDelete }: { item: SavedComparison; onDelete: () => void }) {
   return <article className="saved-card"><div><p className="saved-date">{new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(item.savedAt))}</p><p className="saved-names">{item.trackA.fileName} <span>→</span> {item.trackB.fileName}</p><p className={item.compatible ? "saved-status saved-status--good" : "saved-status"}>{item.reason}</p><div className="saved-metrics"><span>{item.trackA.bpm.toFixed(1)} BPM · {item.trackA.camelot}</span><span>{item.trackB.bpm.toFixed(1)} BPM · {item.trackB.camelot}</span></div></div><button className="icon-button" type="button" aria-label="Remove saved comparison" onClick={onDelete}><Icon name="close" /></button></article>;
@@ -74,7 +75,7 @@ export default function Home() {
     if (!fileA || !fileB) return; setAnalyzing(true); setError(null); setResultA(null); setResultB(null); setCopied(false); setSaved(false);
     try {
       const [a, b] = await Promise.all([decodeAudioFile(fileA), decodeAudioFile(fileB)]);
-      const resultFor = (file: File, audio: Awaited<ReturnType<typeof decodeAudioFile>>): TrackResult => { const tempo = detectTempo(audio.samples, audio.sampleRate); const key = detectKey(audio.samples, audio.sampleRate); return { fileName: file.name, bpm: tempo.bpm, key: key.key, mode: key.mode, camelot: toCamelot(key.key, key.mode), keyConfidence: key.confidence, duration: audio.duration }; };
+      const resultFor = (file: File, audio: Awaited<ReturnType<typeof decodeAudioFile>>): TrackResult => { const tempo = detectTempo(audio.samples, audio.sampleRate); const key = detectKey(audio.samples, audio.sampleRate); return { fileName: file.name, bpm: tempo.bpm, tempoConfidence: tempo.confidence, key: key.key, mode: key.mode, camelot: toCamelot(key.key, key.mode), keyConfidence: key.confidence, duration: audio.duration }; };
       setResultA(resultFor(fileA, a)); setResultB(resultFor(fileB, b));
     } catch (caught) { setError(caught instanceof Error ? caught.message : "We couldn’t read one of those files. Try a different audio file."); } finally { setAnalyzing(false); }
   };

@@ -53,6 +53,7 @@ function computeSTFT(samples: Float32Array): number[][] {
 
 export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: number; confidence: number } {
   const spectra = computeSTFT(samples);
+  if (spectra.length < 8) return { bpm: 0, confidence: 0 };
 
   // Spectral flux: how much MORE energy is in this frame vs the last
   // one, summed across all frequency bins, with negative changes
@@ -79,21 +80,56 @@ export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: n
   const minLag = Math.floor(frameRate * (60 / maxBpm));
   const maxLag = Math.ceil(frameRate * (60 / minBpm));
 
-  let bestLag = minLag;
-  let bestScore = -Infinity;
+  // Raw autocorrelation favors loud files and long clips. Normalize each
+  // overlap so every lag is comparable on a -1…1 scale, then consider its
+  // octave relationship as well. That makes the common “70 vs 140 BPM” and
+  // “64 vs 128 BPM” ambiguity much less likely than picking the single
+  // loudest unnormalized peak.
+  const onsetMean = onsetEnvelope.reduce((sum, item) => sum + item, 0) / onsetEnvelope.length;
+  const centered = onsetEnvelope.map((value) => value - onsetMean);
+  const scoreForLag = (lag: number) => {
+    let dot = 0, firstEnergy = 0, secondEnergy = 0;
+    for (let i = 0; i + lag < centered.length; i++) {
+      dot += centered[i] * centered[i + lag];
+      firstEnergy += centered[i] ** 2;
+      secondEnergy += centered[i + lag] ** 2;
+    }
+    return dot / (Math.sqrt(firstEnergy * secondEnergy) || 1);
+  };
+
+  const scores: { lag: number; score: number }[] = [];
   for (let lag = minLag; lag <= maxLag; lag++) {
-    let score = 0;
-    for (let i = 0; i + lag < onsetEnvelope.length; i++) {
-      score += onsetEnvelope[i] * onsetEnvelope[i + lag];
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestLag = lag;
-    }
+    scores.push({ lag, score: scoreForLag(lag) });
   }
 
-  const bpm = 60 / (bestLag / frameRate);
-  return { bpm, confidence: bestScore };
+  // Restrict to local peaks: neighboring lags are often the same tempo
+  // measured one frame apart and should not count as independent choices.
+  const peaks = scores.filter((candidate, index) =>
+    candidate.score > 0 &&
+    candidate.score >= (scores[index - 1]?.score ?? -Infinity) &&
+    candidate.score >= (scores[index + 1]?.score ?? -Infinity)
+  );
+  const ranked = (peaks.length ? peaks : scores)
+    .map((candidate) => {
+      const doubleLag = candidate.lag * 2;
+      const doubleScore = doubleLag <= maxLag ? scoreForLag(doubleLag) : 0;
+      const bpm = (60 * frameRate) / candidate.lag;
+      // A gentle prior only breaks ties between octave-equivalent tempos;
+      // it does not force every track toward a club tempo.
+      const octavePreference = Math.exp(-Math.abs(Math.log2(bpm / 128))) * 0.06;
+      return { ...candidate, bpm, combinedScore: candidate.score + doubleScore * 0.22 + octavePreference };
+    })
+    .sort((a, b) => b.combinedScore - a.combinedScore);
+
+  const winner = ranked[0];
+  const runnerUp = ranked[1];
+  if (!winner) return { bpm: 0, confidence: 0 };
+
+  const periodicity = Math.max(0, Math.min(1, winner.score));
+  const separation = runnerUp
+    ? Math.max(0, Math.min(1, (winner.combinedScore - runnerUp.combinedScore) / (Math.abs(winner.combinedScore) + 0.0001)))
+    : 1;
+  return { bpm: Math.round(winner.bpm * 10) / 10, confidence: Math.round((periodicity * 0.7 + separation * 0.3) * 100) / 100 };
 }
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
