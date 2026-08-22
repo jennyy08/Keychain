@@ -1,12 +1,30 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { detectKey, detectTempo } from "@/lib/audioAnalysis";
 import { camelotCompatibility, tempoAdjustment, toCamelot } from "@/lib/camelot";
 import { decodeAudioFile } from "@/lib/decodeAudio";
 
 type TrackResult = { fileName: string; bpm: number; key: string; mode: string; camelot: string; keyConfidence: number; duration: number };
+type SavedComparison = { id: string; savedAt: string; trackA: TrackResult; trackB: TrackResult; compatible: boolean; reason: string };
 const AUDIO_EXTENSIONS = /\.(mp3|wav|m4a|aac|ogg|flac)$/i;
+const LIBRARY_KEY = "keychain-comparisons-v1";
+const EMPTY_LIBRARY: SavedComparison[] = [];
+let cachedLibraryValue: string | null = null;
+let cachedLibrary: SavedComparison[] = EMPTY_LIBRARY;
+
+function readLibrary() {
+  if (typeof window === "undefined") return EMPTY_LIBRARY;
+  const value = window.localStorage.getItem(LIBRARY_KEY) ?? "[]";
+  if (value === cachedLibraryValue) return cachedLibrary;
+  try { cachedLibrary = JSON.parse(value) as SavedComparison[]; cachedLibraryValue = value; } catch { cachedLibrary = EMPTY_LIBRARY; cachedLibraryValue = value; }
+  return cachedLibrary;
+}
+function subscribeToLibrary(onChange: () => void) {
+  const notify = (event: Event) => { if (event.type !== "storage" || (event as StorageEvent).key === LIBRARY_KEY) onChange(); };
+  window.addEventListener("storage", notify); window.addEventListener("keychain-library", notify);
+  return () => { window.removeEventListener("storage", notify); window.removeEventListener("keychain-library", notify); };
+}
 
 function Icon({ name, className = "" }: { name: "music" | "upload" | "close" | "swap" | "lock" | "arrow" | "check" | "alert" | "spark"; className?: string }) {
   const p = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -40,28 +58,37 @@ function TrackSlot({ label, file, disabled, onFile, onClear }: { label: "A" | "B
 function ResultCard({ result, label }: { result: TrackResult; label: "A" | "B" }) {
   return <article className="result-card"><div className="result-topline"><span>Track {label}</span><span>{formatDuration(result.duration)}</span></div><p className="result-name" title={result.fileName}>{result.fileName}</p><div className="metrics"><div><span className="metric-value">{result.bpm.toFixed(1)}</span><span className="metric-label">BPM</span></div><div className="key-metric"><span className="key-value">{result.key} <em>{result.mode}</em></span><span className="metric-label">Musical key</span></div><div className="camelot-badge"><span>{result.camelot}</span><small>Camelot</small></div></div><div className="confidence"><span>Key confidence</span><div><i style={{ width: `${Math.round(result.keyConfidence * 100)}%` }} /></div><b>{Math.round(result.keyConfidence * 100)}%</b></div></article>;
 }
+function SavedComparisonCard({ item, onDelete }: { item: SavedComparison; onDelete: () => void }) {
+  return <article className="saved-card"><div><p className="saved-date">{new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(item.savedAt))}</p><p className="saved-names">{item.trackA.fileName} <span>→</span> {item.trackB.fileName}</p><p className={item.compatible ? "saved-status saved-status--good" : "saved-status"}>{item.reason}</p><div className="saved-metrics"><span>{item.trackA.bpm.toFixed(1)} BPM · {item.trackA.camelot}</span><span>{item.trackB.bpm.toFixed(1)} BPM · {item.trackB.camelot}</span></div></div><button className="icon-button" type="button" aria-label="Remove saved comparison" onClick={onDelete}><Icon name="close" /></button></article>;
+}
 
 export default function Home() {
   const [fileA, setFileA] = useState<File | null>(null); const [fileB, setFileB] = useState<File | null>(null);
   const [resultA, setResultA] = useState<TrackResult | null>(null); const [resultB, setResultB] = useState<TrackResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false); const [error, setError] = useState<string | null>(null); const [copied, setCopied] = useState(false);
-  const updateFile = (track: "A" | "B", file: File | null) => { if (track === "A") setFileA(file); else setFileB(file); setResultA(null); setResultB(null); setError(null); setCopied(false); };
+  const [saved, setSaved] = useState(false);
+  const library = useSyncExternalStore(subscribeToLibrary, readLibrary, () => EMPTY_LIBRARY);
+  const updateLibrary = (next: SavedComparison[]) => { try { window.localStorage.setItem(LIBRARY_KEY, JSON.stringify(next)); window.dispatchEvent(new Event("keychain-library")); } catch { setError("Your browser couldn’t save the comparison locally."); } };
+  const updateFile = (track: "A" | "B", file: File | null) => { if (track === "A") setFileA(file); else setFileB(file); setResultA(null); setResultB(null); setError(null); setCopied(false); setSaved(false); };
   const analyze = async () => {
-    if (!fileA || !fileB) return; setAnalyzing(true); setError(null); setResultA(null); setResultB(null); setCopied(false);
+    if (!fileA || !fileB) return; setAnalyzing(true); setError(null); setResultA(null); setResultB(null); setCopied(false); setSaved(false);
     try {
       const [a, b] = await Promise.all([decodeAudioFile(fileA), decodeAudioFile(fileB)]);
       const resultFor = (file: File, audio: Awaited<ReturnType<typeof decodeAudioFile>>): TrackResult => { const tempo = detectTempo(audio.samples, audio.sampleRate); const key = detectKey(audio.samples, audio.sampleRate); return { fileName: file.name, bpm: tempo.bpm, key: key.key, mode: key.mode, camelot: toCamelot(key.key, key.mode), keyConfidence: key.confidence, duration: audio.duration }; };
       setResultA(resultFor(fileA, a)); setResultB(resultFor(fileB, b));
     } catch (caught) { setError(caught instanceof Error ? caught.message : "We couldn’t read one of those files. Try a different audio file."); } finally { setAnalyzing(false); }
   };
-  const reset = () => { setFileA(null); setFileB(null); setResultA(null); setResultB(null); setError(null); setCopied(false); };
-  const swap = () => { const nextA = fileB; setFileB(fileA); setFileA(nextA); setResultA(null); setResultB(null); setError(null); setCopied(false); };
+  const reset = () => { setFileA(null); setFileB(null); setResultA(null); setResultB(null); setError(null); setCopied(false); setSaved(false); };
+  const swap = () => { const nextA = fileB; setFileB(fileA); setFileA(nextA); setResultA(null); setResultB(null); setError(null); setCopied(false); setSaved(false); };
   const compatibility = resultA && resultB ? camelotCompatibility(resultA.camelot, resultB.camelot) : null; const adjustment = resultA && resultB ? tempoAdjustment(resultA.bpm, resultB.bpm) : null;
   const copySummary = async () => { if (!resultA || !resultB) return; const c = camelotCompatibility(resultA.camelot, resultB.camelot); try { await navigator.clipboard.writeText(`Keychain mix check\n${resultA.fileName}: ${resultA.bpm.toFixed(1)} BPM · ${resultA.key} ${resultA.mode} (${resultA.camelot})\n${resultB.fileName}: ${resultB.bpm.toFixed(1)} BPM · ${resultB.key} ${resultB.mode} (${resultB.camelot})\n${c.reason}`); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { setError("Couldn’t copy the report. Select the results manually instead."); } };
+  const saveComparison = () => { if (!resultA || !resultB || !compatibility || saved) return; const item: SavedComparison = { id: crypto.randomUUID(), savedAt: new Date().toISOString(), trackA: resultA, trackB: resultB, compatible: compatibility.compatible, reason: compatibility.reason }; updateLibrary([item, ...library].slice(0, 30)); setSaved(true); };
+  const deleteComparison = (id: string) => updateLibrary(library.filter((item) => item.id !== id));
   return <div className="app-shell"><header className="site-header"><div className="header-inner"><a className="brand" href="#top" aria-label="Keychain home"><span className="brand-mark"><Icon name="music" /></span><span>Keychain</span></a><span className="header-note"><Icon name="lock" /> Analysis stays on your device</span></div></header><main id="top" className="main-content">
     <section className="hero"><p className="eyebrow"><Icon name="spark" /> Harmonic mixing assistant</p><h1>Know what works<br /><em>before</em> you mix.</h1><p className="hero-copy">Drop in two tracks to check their tempo, key, and harmonic compatibility. Built for quick, confident decisions in the booth.</p></section>
     <section className="workspace" aria-labelledby="compare-title"><div className="section-heading"><div><p className="section-kicker">01 — Select tracks</p><h2 id="compare-title">Compare two tracks</h2></div>{(fileA || fileB) && <button className="quiet-button" type="button" onClick={reset} disabled={analyzing}>Clear all</button>}</div><div className="track-grid"><TrackSlot label="A" file={fileA} disabled={analyzing} onFile={(f) => updateFile("A", f)} onClear={() => updateFile("A", null)} /><div className="swap-wrap"><button className="swap-button" type="button" aria-label="Swap tracks" disabled={(!fileA && !fileB) || analyzing} onClick={swap}><Icon name="swap" /></button></div><TrackSlot label="B" file={fileB} disabled={analyzing} onFile={(f) => updateFile("B", f)} onClear={() => updateFile("B", null)} /></div><button className="analyze-button" type="button" onClick={analyze} disabled={!fileA || !fileB || analyzing}>{analyzing ? <><span className="spinner" /> Reading your tracks…</> : <>Analyze compatibility <Icon name="arrow" /></>}</button>{error && <p className="error-message" role="alert"><Icon name="alert" /> {error}</p>}</section>
-    {resultA && resultB && compatibility && adjustment && <section className="results" aria-live="polite" aria-labelledby="results-title"><div className="section-heading"><div><p className="section-kicker">02 — Mix report</p><h2 id="results-title">Your results</h2></div><button className="quiet-button" type="button" onClick={copySummary}>{copied ? "Copied" : "Copy summary"}</button></div><div className="result-grid"><ResultCard result={resultA} label="A" /><ResultCard result={resultB} label="B" /></div><article className={`verdict ${compatibility.compatible ? "verdict--good" : "verdict--caution"}`}><div className="verdict-icon"><Icon name={compatibility.compatible ? "check" : "alert"} /></div><div><p className="verdict-label">{compatibility.compatible ? "Good harmonic match" : "Mix with intention"}</p><h3>{compatibility.reason}</h3><p>To match tempo, <strong>{adjustment.pctChangeNeeded > 0 ? "speed up" : "slow down"} Track B by {Math.abs(adjustment.pctChangeNeeded)}%</strong>. {adjustment.withinComfortableRange ? "That’s within a comfortable adjustment range." : "That is beyond the usual ±8% comfort range, so expect a more noticeable change."}</p></div></article></section>}
+    {resultA && resultB && compatibility && adjustment && <section className="results" aria-live="polite" aria-labelledby="results-title"><div className="section-heading"><div><p className="section-kicker">02 — Mix report</p><h2 id="results-title">Your results</h2></div><div className="result-actions"><button className="quiet-button" type="button" onClick={saveComparison}>{saved ? "Saved locally" : "Save to library"}</button><button className="quiet-button" type="button" onClick={copySummary}>{copied ? "Copied" : "Copy summary"}</button></div></div><div className="result-grid"><ResultCard result={resultA} label="A" /><ResultCard result={resultB} label="B" /></div><article className={`verdict ${compatibility.compatible ? "verdict--good" : "verdict--caution"}`}><div className="verdict-icon"><Icon name={compatibility.compatible ? "check" : "alert"} /></div><div><p className="verdict-label">{compatibility.compatible ? "Good harmonic match" : "Mix with intention"}</p><h3>{compatibility.reason}</h3><p>To match tempo, <strong>{adjustment.pctChangeNeeded > 0 ? "speed up" : "slow down"} Track B by {Math.abs(adjustment.pctChangeNeeded)}%</strong>. {adjustment.withinComfortableRange ? "That’s within a comfortable adjustment range." : "That is beyond the usual ±8% comfort range, so expect a more noticeable change."}</p></div></article></section>}
+    {library.length > 0 && <section className="library" aria-labelledby="library-title"><div className="section-heading"><div><p className="section-kicker">Your local library</p><h2 id="library-title">Saved comparisons</h2></div><span className="library-count">{library.length} saved</span></div><div className="saved-list">{library.map((item) => <SavedComparisonCard key={item.id} item={item} onDelete={() => deleteComparison(item.id)} />)}</div></section>}
     <section className="how-it-works"><p className="section-kicker">How it works</p><div><article><span>01</span><h3>Upload locally</h3><p>Your source files never leave your browser.</p></article><article><span>02</span><h3>Read the audio</h3><p>Tempo and key are measured from the actual waveform.</p></article><article><span>03</span><h3>Make the call</h3><p>Use Camelot compatibility and tempo range to plan the transition.</p></article></div></section>
   </main><footer>Keychain uses browser-based audio analysis. Results are a strong starting point—always trust your ears.</footer></div>;
 }
