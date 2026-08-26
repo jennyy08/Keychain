@@ -8,16 +8,21 @@ import { decodeAudioFile } from "@/lib/decodeAudio";
 type TrackResult = { fileName: string; bpm: number; tempoConfidence?: number; key: string; mode: string; camelot: string; keyConfidence: number; duration: number; manuallyVerified?: boolean };
 type SavedComparison = { id: string; savedAt: string; trackA: TrackResult; trackB: TrackResult; compatible: boolean; reason: string; tags?: string[]; note?: string };
 type SavedTrack = { id: string; savedAt: string; track: TrackResult };
+type PlaylistProject = { id: string; createdAt: string; name: string; occasion: string; duration: number; startEnergy: string; endEnergy: string };
 const AUDIO_EXTENSIONS = /\.(mp3|wav|m4a|aac|ogg|flac)$/i;
 const LIBRARY_KEY = "keychain-comparisons-v1";
 const TRACKS_KEY = "keychain-tracks-v1";
+const PLAYLISTS_KEY = "keychain-playlists-v1";
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const EMPTY_LIBRARY: SavedComparison[] = [];
 const EMPTY_TRACKS: SavedTrack[] = [];
+const EMPTY_PLAYLISTS: PlaylistProject[] = [];
 let cachedLibraryValue: string | null = null;
 let cachedLibrary: SavedComparison[] = EMPTY_LIBRARY;
 let cachedTracksValue: string | null = null;
 let cachedTracks: SavedTrack[] = EMPTY_TRACKS;
+let cachedPlaylistsValue: string | null = null;
+let cachedPlaylists: PlaylistProject[] = EMPTY_PLAYLISTS;
 
 function readLibrary() {
   if (typeof window === "undefined") return EMPTY_LIBRARY;
@@ -42,6 +47,18 @@ function subscribeToTracks(onChange: () => void) {
   const notify = (event: Event) => { if (event.type !== "storage" || (event as StorageEvent).key === TRACKS_KEY) onChange(); };
   window.addEventListener("storage", notify); window.addEventListener("keychain-tracks", notify);
   return () => { window.removeEventListener("storage", notify); window.removeEventListener("keychain-tracks", notify); };
+}
+function readPlaylists() {
+  if (typeof window === "undefined") return EMPTY_PLAYLISTS;
+  const value = window.localStorage.getItem(PLAYLISTS_KEY) ?? "[]";
+  if (value === cachedPlaylistsValue) return cachedPlaylists;
+  try { cachedPlaylists = JSON.parse(value) as PlaylistProject[]; cachedPlaylistsValue = value; } catch { cachedPlaylists = EMPTY_PLAYLISTS; cachedPlaylistsValue = value; }
+  return cachedPlaylists;
+}
+function subscribeToPlaylists(onChange: () => void) {
+  const notify = (event: Event) => { if (event.type !== "storage" || (event as StorageEvent).key === PLAYLISTS_KEY) onChange(); };
+  window.addEventListener("storage", notify); window.addEventListener("keychain-playlists", notify);
+  return () => { window.removeEventListener("storage", notify); window.removeEventListener("keychain-playlists", notify); };
 }
 
 function Icon({ name, className = "" }: { name: "music" | "upload" | "close" | "swap" | "lock" | "arrow" | "check" | "alert" | "spark"; className?: string }) {
@@ -114,6 +131,9 @@ function SavedTrackCard({ item, onDelete }: { item: SavedTrack; onDelete: () => 
   const { track } = item;
   return <article className="saved-track-card"><div><p className="saved-date">{new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(item.savedAt))}</p><p className="saved-track-name" title={track.fileName}>{track.fileName}</p><div className="saved-track-metrics"><span>{track.bpm.toFixed(1)} BPM</span><span>{track.key} {track.mode}</span><b>{track.camelot}</b></div></div><button className="icon-button" type="button" aria-label={`Remove ${track.fileName} from collection`} onClick={onDelete}><Icon name="close" /></button></article>;
 }
+function PlaylistProjectCard({ project, onDelete }: { project: PlaylistProject; onDelete: () => void }) {
+  return <article className="playlist-card"><div><p className="saved-date">{project.occasion || "Personal playlist"}</p><h3>{project.name}</h3><p>{project.duration} min · {project.startEnergy} to {project.endEnergy}</p></div><button className="icon-button" type="button" onClick={onDelete} aria-label={`Remove ${project.name}`}><Icon name="close" /></button></article>;
+}
 function CorrectionFields({ label, result, onChange }: { label: "A" | "B"; result: TrackResult; onChange: (patch: Partial<TrackResult>) => void }) {
   return <fieldset className="correction-fields"><legend>Track {label}</legend><label>BPM<input type="number" min="40" max="300" step="0.1" value={result.bpm} onChange={(event) => onChange({ bpm: Number(event.target.value) })} /></label><label>Key<select value={result.key} onChange={(event) => onChange({ key: event.target.value })}>{NOTE_NAMES.map((note) => <option key={note}>{note}</option>)}</select></label><label>Mode<select value={result.mode} onChange={(event) => onChange({ mode: event.target.value })}><option value="major">Major</option><option value="minor">Minor</option></select></label></fieldset>;
 }
@@ -125,10 +145,13 @@ export default function Home() {
   const [saved, setSaved] = useState(false); const [tracksSaved, setTracksSaved] = useState(false); const [showCorrections, setShowCorrections] = useState(false); const [showSaveDetails, setShowSaveDetails] = useState(false);
   const [draftTags, setDraftTags] = useState(""); const [draftNote, setDraftNote] = useState("");
   const [libraryQuery, setLibraryQuery] = useState(""); const [libraryFilter, setLibraryFilter] = useState<"all" | "compatible">("all"); const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
+  const [playlistName, setPlaylistName] = useState(""); const [playlistOccasion, setPlaylistOccasion] = useState(""); const [playlistDuration, setPlaylistDuration] = useState(90); const [startEnergy, setStartEnergy] = useState("Easy"); const [endEnergy, setEndEnergy] = useState("Lift");
   const library = useSyncExternalStore(subscribeToLibrary, readLibrary, () => EMPTY_LIBRARY);
   const tracks = useSyncExternalStore(subscribeToTracks, readTracks, () => EMPTY_TRACKS);
+  const playlists = useSyncExternalStore(subscribeToPlaylists, readPlaylists, () => EMPTY_PLAYLISTS);
   const updateLibrary = (next: SavedComparison[]) => { try { window.localStorage.setItem(LIBRARY_KEY, JSON.stringify(next)); window.dispatchEvent(new Event("keychain-library")); } catch { setError("Your browser couldn’t save the comparison locally."); } };
   const updateTracks = (next: SavedTrack[]) => { try { window.localStorage.setItem(TRACKS_KEY, JSON.stringify(next)); window.dispatchEvent(new Event("keychain-tracks")); } catch { setError("Your browser couldn’t save the tracks locally."); } };
+  const updatePlaylists = (next: PlaylistProject[]) => { try { window.localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(next)); window.dispatchEvent(new Event("keychain-playlists")); } catch { setError("Your browser couldn’t save the playlist locally."); } };
   const updateFile = (track: "A" | "B", file: File | null) => { if (track === "A") setFileA(file); else setFileB(file); setResultA(null); setResultB(null); setError(null); setCopied(false); setSaved(false); setTracksSaved(false); setShowCorrections(false); setShowSaveDetails(false); };
   const analyze = async () => {
     if (!fileA || !fileB) return; setAnalyzing(true); setError(null); setResultA(null); setResultB(null); setCopied(false); setSaved(false); setTracksSaved(false); setShowCorrections(false); setShowSaveDetails(false); setDraftTags(""); setDraftNote("");
@@ -158,6 +181,14 @@ export default function Home() {
     setTracksSaved(true);
   };
   const deleteTrack = (id: string) => updateTracks(tracks.filter((item) => item.id !== id));
+  const createPlaylist = () => {
+    const name = playlistName.trim();
+    if (!name) return;
+    const project: PlaylistProject = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), name, occasion: playlistOccasion.trim(), duration: Math.min(600, Math.max(15, playlistDuration)), startEnergy, endEnergy };
+    updatePlaylists([project, ...playlists].slice(0, 20));
+    setPlaylistName(""); setPlaylistOccasion(""); setPlaylistDuration(90); setStartEnergy("Easy"); setEndEnergy("Lift");
+  };
+  const deletePlaylist = (id: string) => updatePlaylists(playlists.filter((project) => project.id !== id));
   const exportLibrary = (format: "csv" | "json") => { try { downloadLibrary(library, format); } catch { setError("Couldn’t create that export. Please try again."); } };
   const importLibrary = async (file: File) => {
     try {
@@ -181,6 +212,7 @@ export default function Home() {
     {library.length > 0 && <section className="library" aria-labelledby="library-title"><div className="section-heading"><div><p className="section-kicker">Your local library</p><h2 id="library-title">Saved comparisons</h2></div><div className="library-heading-actions"><span className="library-count">{library.length} saved</span><div className="export-actions"><label className="quiet-button file-import">Import JSON<input type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importLibrary(file); event.currentTarget.value = ""; }} /></label><button className="quiet-button" type="button" onClick={() => exportLibrary("csv")}>Export CSV</button><button className="quiet-button" type="button" onClick={() => exportLibrary("json")}>Backup JSON</button></div></div></div>{libraryMessage && <p className="library-message" role="status">{libraryMessage}</p>}<div className="library-tools"><label className="library-search"><span className="sr-only">Search saved comparisons</span><input value={libraryQuery} onChange={(event) => setLibraryQuery(event.target.value)} placeholder="Search track or Camelot key" /></label><div className="library-filters" aria-label="Comparison filters"><button type="button" className={libraryFilter === "all" ? "filter-button filter-button--active" : "filter-button"} onClick={() => setLibraryFilter("all")}>All</button><button type="button" className={libraryFilter === "compatible" ? "filter-button filter-button--active" : "filter-button"} onClick={() => setLibraryFilter("compatible")}>Good matches</button></div></div>{visibleLibrary.length ? <div className="saved-list">{visibleLibrary.map((item) => <SavedComparisonCard key={item.id} item={item} onDelete={() => deleteComparison(item.id)} />)}</div> : <p className="empty-library">No saved comparisons match that search.</p>}</section>}
     {resultA && resultB && <section className="track-save-strip"><div><p className="section-kicker">Build your collection</p><p>Save these individual tracks to use in future recommendations.</p></div><button className="save-button" type="button" disabled={tracksSaved} onClick={saveTracks}>{tracksSaved ? "Tracks saved" : "Save both tracks"}</button></section>}
     {tracks.length > 0 && <section className="track-collection" aria-labelledby="track-collection-title"><div className="section-heading"><div><p className="section-kicker">Your local collection</p><h2 id="track-collection-title">Saved tracks</h2></div><span className="library-count">{tracks.length} tracks</span></div><div className="saved-track-list">{tracks.map((item) => <SavedTrackCard key={item.id} item={item} onDelete={() => deleteTrack(item.id)} />)}</div></section>}
+    <section className="playlist-planner" aria-labelledby="playlist-planner-title"><div className="section-heading"><div><p className="section-kicker">Playlist planner</p><h2 id="playlist-planner-title">Start with the moment</h2></div><span className="library-count">{playlists.length} plans</span></div><p className="planner-intro">Create a private brief for the occasion. Next we’ll use your saved tracks to build the running order.</p><form className="playlist-form" onSubmit={(event) => { event.preventDefault(); createPlaylist(); }}><label>Playlist name<input required value={playlistName} onChange={(event) => setPlaylistName(event.target.value)} placeholder="Friday rooftop" maxLength={60} /></label><label>Occasion<input value={playlistOccasion} onChange={(event) => setPlaylistOccasion(event.target.value)} placeholder="Dinner, run, party…" maxLength={60} /></label><label>Duration (minutes)<input type="number" min="15" max="600" value={playlistDuration} onChange={(event) => setPlaylistDuration(Number(event.target.value))} /></label><label>Start energy<select value={startEnergy} onChange={(event) => setStartEnergy(event.target.value)}><option>Easy</option><option>Warm</option><option>High</option></select></label><label>End energy<select value={endEnergy} onChange={(event) => setEndEnergy(event.target.value)}><option>Easy</option><option>Lift</option><option>Peak</option></select></label><button className="save-button" type="submit">Create plan</button></form>{playlists.length > 0 && <div className="playlist-list">{playlists.map((project) => <PlaylistProjectCard key={project.id} project={project} onDelete={() => deletePlaylist(project.id)} />)}</div>}</section>
     <section className="how-it-works"><p className="section-kicker">How it works</p><div><article><span>01</span><h3>Upload locally</h3><p>Your source files never leave your browser.</p></article><article><span>02</span><h3>Read the audio</h3><p>Tempo and key are measured from the actual waveform.</p></article><article><span>03</span><h3>Make the call</h3><p>Use Camelot compatibility and tempo range to plan the transition.</p></article></div></section>
   </main><footer>Keychain uses browser-based audio analysis. Results are a strong starting point—always trust your ears.</footer></div>;
 }
