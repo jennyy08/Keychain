@@ -3,6 +3,12 @@ import Icon from "@/components/ui/Icon";
 import { camelotCompatibility, tempoAdjustment } from "@/lib/camelot";
 import type { PlaylistProject, SavedTrack } from "@/lib/types";
 
+type TrackSuggestion = {
+  item: SavedTrack;
+  detail: string;
+  score: number;
+};
+
 function PlaylistCard({
   project,
   selected,
@@ -66,6 +72,44 @@ function TransitionCue({ from, to }: { from: SavedTrack; to: SavedTrack }) {
   );
 }
 
+function getSuggestions(
+  availableTracks: SavedTrack[],
+  currentTrack?: SavedTrack,
+): TrackSuggestion[] {
+  if (!currentTrack) {
+    return availableTracks.slice(0, 3).map((item) => ({
+      item,
+      score: 0,
+      detail: "A good place to begin",
+    }));
+  }
+
+  return availableTracks
+    .map((item) => {
+      const harmonic = camelotCompatibility(
+        currentTrack.track.camelot,
+        item.track.camelot,
+      );
+      const tempo = tempoAdjustment(currentTrack.track.bpm, item.track.bpm);
+      const tempoScore = Math.max(0, 30 - Math.abs(tempo.pctChangeNeeded) * 3.75);
+      const score = (harmonic.compatible ? 70 : 0) + tempoScore;
+      const tempoDetail =
+        tempo.pctChangeNeeded === 0
+          ? "same tempo"
+          : `${Math.abs(tempo.pctChangeNeeded)}% tempo change`;
+      return {
+        item,
+        score,
+        detail: harmonic.compatible ? `Harmonic match · ${tempoDetail}` : tempoDetail,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.score - a.score || a.item.track.fileName.localeCompare(b.item.track.fileName),
+    )
+    .slice(0, 3);
+}
+
 export default function PlaylistPlanner({
   playlists,
   tracks,
@@ -112,6 +156,8 @@ export default function PlaylistPlanner({
   const activeTracks = activeTrackIds
     .map((id) => tracks.find((item) => item.id === id))
     .filter((item): item is SavedTrack => Boolean(item));
+  const availableTracks = tracks.filter((item) => !activeTrackIds.includes(item.id));
+  const suggestions = getSuggestions(availableTracks, activeTracks.at(-1));
   return (
     <section className="playlist-planner" aria-labelledby="playlist-planner-title">
       <div className="section-heading">
@@ -240,26 +286,42 @@ export default function PlaylistPlanner({
           </div>
           <div className="playlist-editor-grid">
             <div>
-              <h4>Available tracks</h4>
+              <h4>{activeTracks.length ? "Recommended next" : "Suggested starters"}</h4>
+              {suggestions.length > 0 && (
+                <div className="track-suggestions">
+                  {suggestions.map(({ item, detail }) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() =>
+                        onSetTracks(activePlaylist.id, [...activeTrackIds, item.id])
+                      }
+                    >
+                      <span>{item.track.fileName}</span>
+                      <small>{detail}</small>
+                      <b>+</b>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <h4 className="available-tracks-heading">All remaining tracks</h4>
               {tracks.length ? (
                 <div className="available-tracks">
-                  {tracks
-                    .filter((item) => !activeTrackIds.includes(item.id))
-                    .map((item) => (
-                      <button
-                        type="button"
-                        key={item.id}
-                        onClick={() =>
-                          onSetTracks(activePlaylist.id, [...activeTrackIds, item.id])
-                        }
-                      >
-                        <span>{item.track.fileName}</span>
-                        <small>
-                          {item.track.bpm.toFixed(1)} BPM · {item.track.camelot}
-                        </small>
-                        <b>+</b>
-                      </button>
-                    ))}
+                  {availableTracks.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() =>
+                        onSetTracks(activePlaylist.id, [...activeTrackIds, item.id])
+                      }
+                    >
+                      <span>{item.track.fileName}</span>
+                      <small>
+                        {item.track.bpm.toFixed(1)} BPM · {item.track.camelot}
+                      </small>
+                      <b>+</b>
+                    </button>
+                  ))}
                 </div>
               ) : (
                 <p className="planner-empty">

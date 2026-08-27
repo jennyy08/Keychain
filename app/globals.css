@@ -61,6 +61,47 @@
   max-height: 280px;
   overflow: auto;
 }
+.track-suggestions {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.track-suggestions button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 17px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--green);
+  border-radius: 3px;
+  background: #f7fbf7;
+  color: var(--ink);
+  text-align: left;
+}
+.track-suggestions button:hover {
+  background: #fff;
+}
+.track-suggestions span {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.track-suggestions small {
+  color: var(--green-dark);
+  font: 10px var(--font-mono);
+  white-space: nowrap;
+}
+.track-suggestions b {
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 400;
+}
+.available-tracks-heading {
+  margin-top: 4px !important;
+}
 .available-tracks button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 17px;
