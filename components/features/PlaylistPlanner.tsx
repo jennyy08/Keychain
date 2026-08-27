@@ -1,4 +1,6 @@
+import { Fragment } from "react";
 import Icon from "@/components/ui/Icon";
+import { camelotCompatibility, tempoAdjustment } from "@/lib/camelot";
 import type { PlaylistProject, SavedTrack } from "@/lib/types";
 
 function PlaylistCard({
@@ -38,6 +40,26 @@ function PlaylistCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function TransitionCue({ from, to }: { from: SavedTrack; to: SavedTrack }) {
+  const harmonic = camelotCompatibility(from.track.camelot, to.track.camelot);
+  const tempo = tempoAdjustment(from.track.bpm, to.track.bpm);
+  const tempoLabel =
+    tempo.pctChangeNeeded === 0
+      ? "same tempo"
+      : `${tempo.pctChangeNeeded > 0 ? "speed up" : "slow down"} ${Math.abs(tempo.pctChangeNeeded)}%`;
+
+  return (
+    <li
+      className={`transition-cue ${harmonic.compatible && tempo.withinComfortableRange ? "transition-cue--good" : ""}`}
+      aria-label={`Transition cue: ${harmonic.reason}; ${tempoLabel}`}
+    >
+      <Icon name={harmonic.compatible ? "check" : "alert"} />
+      <span>{harmonic.compatible ? "Harmonic match" : "Check transition"}</span>
+      <small>{tempoLabel}</small>
+    </li>
   );
 }
 
@@ -218,60 +240,65 @@ export default function PlaylistPlanner({
               {activeTracks.length ? (
                 <ol className="playlist-queue">
                   {activeTracks.map((item, index) => (
-                    <li key={item.id}>
-                      <span className="queue-number">{index + 1}</span>
-                      <div>
-                        <b>{item.track.fileName}</b>
-                        <small>
-                          {item.track.bpm.toFixed(1)} BPM · {item.track.key}{" "}
-                          {item.track.mode} · {item.track.camelot}
-                        </small>
-                      </div>
-                      <div className="queue-actions">
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          aria-label="Move track up"
-                          onClick={() => {
-                            const next = [...activeTrackIds];
-                            [next[index - 1], next[index]] = [
-                              next[index],
-                              next[index - 1],
-                            ];
-                            onSetTracks(activePlaylist.id, next);
-                          }}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === activeTracks.length - 1}
-                          aria-label="Move track down"
-                          onClick={() => {
-                            const next = [...activeTrackIds];
-                            [next[index + 1], next[index]] = [
-                              next[index],
-                              next[index + 1],
-                            ];
-                            onSetTracks(activePlaylist.id, next);
-                          }}
-                        >
-                          ↓
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Remove track from playlist"
-                          onClick={() =>
-                            onSetTracks(
-                              activePlaylist.id,
-                              activeTrackIds.filter((id) => id !== item.id),
-                            )
-                          }
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </li>
+                    <Fragment key={item.id}>
+                      {index > 0 && (
+                        <TransitionCue from={activeTracks[index - 1]} to={item} />
+                      )}
+                      <li>
+                        <span className="queue-number">{index + 1}</span>
+                        <div>
+                          <b>{item.track.fileName}</b>
+                          <small>
+                            {item.track.bpm.toFixed(1)} BPM · {item.track.key}{" "}
+                            {item.track.mode} · {item.track.camelot}
+                          </small>
+                        </div>
+                        <div className="queue-actions">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            aria-label="Move track up"
+                            onClick={() => {
+                              const next = [...activeTrackIds];
+                              [next[index - 1], next[index]] = [
+                                next[index],
+                                next[index - 1],
+                              ];
+                              onSetTracks(activePlaylist.id, next);
+                            }}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === activeTracks.length - 1}
+                            aria-label="Move track down"
+                            onClick={() => {
+                              const next = [...activeTrackIds];
+                              [next[index + 1], next[index]] = [
+                                next[index],
+                                next[index + 1],
+                              ];
+                              onSetTracks(activePlaylist.id, next);
+                            }}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Remove track from playlist"
+                            onClick={() =>
+                              onSetTracks(
+                                activePlaylist.id,
+                                activeTrackIds.filter((id) => id !== item.id),
+                              )
+                            }
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </li>
+                    </Fragment>
                   ))}
                 </ol>
               ) : (

@@ -112,6 +112,31 @@
   border-radius: 3px;
   background: var(--paper);
 }
+.playlist-queue .transition-cue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 2px 6px 2px 28px;
+  border: 0;
+  background: transparent;
+  color: #9a5c24;
+  font: 10px var(--font-mono);
+}
+.transition-cue svg {
+  width: 13px;
+  height: 13px;
+}
+.transition-cue span {
+  font-weight: 600;
+}
+.transition-cue small {
+  color: var(--ink-faint);
+  font: inherit;
+}
+.playlist-queue .transition-cue--good {
+  color: var(--green);
+}
 .queue-number {
   color: var(--green);
   font: 11px var(--font-mono);
