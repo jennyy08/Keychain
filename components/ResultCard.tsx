@@ -11,12 +11,16 @@ export type TrackResult = {
 export default function ResultCard({ result }: { result: TrackResult }) {
   return (
     <div className="bg-panel border border-border rounded-lg p-5">
-      <p className="text-ink-dim text-xs mb-4 truncate uppercase tracking-wide">{result.fileName}</p>
+      <p className="text-ink-dim text-xs mb-4 truncate uppercase tracking-wide">
+        {result.fileName}
+      </p>
 
       <div className="flex items-end justify-between mb-4">
         <div>
           <div className="flex items-baseline gap-1.5">
-            <span className="tabular text-4xl text-ink font-semibold leading-none">{result.bpm.toFixed(1)}</span>
+            <span className="tabular text-4xl text-ink font-semibold leading-none">
+              {result.bpm.toFixed(1)}
+            </span>
             <span className="text-ink-faint text-xs uppercase tracking-wide">bpm</span>
           </div>
           <p className="font-display text-lg tracking-wide text-ink mt-2">
@@ -24,9 +28,7 @@ export default function ResultCard({ result }: { result: TrackResult }) {
           </p>
         </div>
 
-        <div
-          className="w-14 h-14 rounded-full border-2 border-ink flex items-center justify-center shrink-0 bg-gold"
-        >
+        <div className="w-14 h-14 rounded-full border-2 border-ink flex items-center justify-center shrink-0 bg-gold">
           <span className="font-display text-base text-ink">{result.camelot}</span>
         </div>
       </div>

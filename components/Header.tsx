@@ -13,7 +13,9 @@ export default function Header() {
       <div className="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <Disc3 className="w-6 h-6 text-brand" strokeWidth={2} />
-          <span className="font-display text-xl font-semibold text-ink tracking-tight">Keychain</span>
+          <span className="font-display text-xl font-semibold text-ink tracking-tight">
+            Keychain
+          </span>
         </div>
 
         <nav className="flex items-center gap-1">

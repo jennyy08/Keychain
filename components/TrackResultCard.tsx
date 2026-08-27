@@ -13,11 +13,15 @@ export type TrackResult = {
 export default function TrackResultCard({ result }: { result: TrackResult }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint mb-4 truncate">{result.fileName}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint mb-4 truncate">
+        {result.fileName}
+      </p>
 
       <div className="flex items-end justify-between mb-4">
         <div>
-          <p className="tabular text-4xl font-semibold text-ink leading-none">{result.bpm.toFixed(1)}</p>
+          <p className="tabular text-4xl font-semibold text-ink leading-none">
+            {result.bpm.toFixed(1)}
+          </p>
           <p className="text-xs text-ink-faint mt-1">BPM</p>
         </div>
         <div className="text-right">
@@ -33,7 +37,8 @@ export default function TrackResultCard({ result }: { result: TrackResult }) {
           {result.camelot}
         </span>
         <span className="text-xs text-ink-faint">
-          {(result.keyConfidence * 100).toFixed(0)}% confidence · {result.duration.toFixed(0)}s
+          {(result.keyConfidence * 100).toFixed(0)}% confidence ·{" "}
+          {result.duration.toFixed(0)}s
         </span>
       </div>
     </div>

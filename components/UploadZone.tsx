@@ -32,7 +32,9 @@ export default function UploadZone({
   if (file) {
     return (
       <div className="bg-surface border border-border rounded-xl p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-ink-faint mb-3">{label}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-faint mb-3">
+          {label}
+        </p>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-surface-2 border border-border flex items-center justify-center shrink-0">
             <Music2 className="w-5 h-5 text-brand" />
@@ -63,7 +65,9 @@ export default function UploadZone({
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
       className={`rounded-xl p-5 cursor-pointer transition-colors border-2 border-dashed ${
-        isDragOver ? "border-brand bg-surface-2" : "border-border bg-surface hover:border-ink-faint"
+        isDragOver
+          ? "border-brand bg-surface-2"
+          : "border-border bg-surface hover:border-ink-faint"
       }`}
     >
       <input
@@ -76,7 +80,9 @@ export default function UploadZone({
           if (f) onFile(f);
         }}
       />
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint mb-3">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint mb-3">
+        {label}
+      </p>
       <div className="flex flex-col items-center justify-center py-6 text-center">
         <UploadCloud className="w-7 h-7 text-ink-faint mb-2" strokeWidth={1.5} />
         <p className="text-sm text-ink-dim">

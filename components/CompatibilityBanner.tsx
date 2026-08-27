@@ -20,7 +20,9 @@ export default function CompatibilityBanner({
       className="rounded-xl p-5 border"
       style={{
         background: compatible ? "var(--color-good-bg)" : "var(--color-bad-bg)",
-        borderColor: compatible ? "var(--color-good-border)" : "var(--color-bad-border)",
+        borderColor: compatible
+          ? "var(--color-good-border)"
+          : "var(--color-bad-border)",
       }}
     >
       <div className="flex items-start gap-3">
@@ -38,7 +40,9 @@ export default function CompatibilityBanner({
           <p className="text-sm text-ink-dim mb-2">{reason}</p>
           <p className="text-sm text-ink-dim">
             To match tempos, {pctChangeNeeded > 0 ? "speed up" : "slow down"} Track B by{" "}
-            <span className="tabular font-medium text-ink">{Math.abs(pctChangeNeeded)}%</span>
+            <span className="tabular font-medium text-ink">
+              {Math.abs(pctChangeNeeded)}%
+            </span>
             {" — "}
             {withinComfortableRange
               ? "within a comfortable pitch-adjustment range."

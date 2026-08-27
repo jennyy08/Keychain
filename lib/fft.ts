@@ -19,7 +19,10 @@ export function fft(input: Float32Array): Complex[] {
     throw new Error(`FFT input length must be a power of 2, got ${n}`);
   }
 
-  let signal: Complex[] = Array.from({ length: n }, (_, i) => ({ re: input[i], im: 0 }));
+  let signal: Complex[] = Array.from({ length: n }, (_, i) => ({
+    re: input[i],
+    im: 0,
+  }));
 
   if (n === 1) return signal;
 
@@ -53,8 +56,14 @@ export function fft(input: Float32Array): Complex[] {
           im: odd.re * twiddle.im + odd.im * twiddle.re,
         };
 
-        signal[start + k] = { re: even.re + oddTwiddled.re, im: even.im + oddTwiddled.im };
-        signal[start + k + halfSize] = { re: even.re - oddTwiddled.re, im: even.im - oddTwiddled.im };
+        signal[start + k] = {
+          re: even.re + oddTwiddled.re,
+          im: even.im + oddTwiddled.im,
+        };
+        signal[start + k + halfSize] = {
+          re: even.re - oddTwiddled.re,
+          im: even.im - oddTwiddled.im,
+        };
       }
     }
   }

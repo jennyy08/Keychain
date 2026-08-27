@@ -4,7 +4,9 @@
  * librosa.load() from the Python version. No server, no upload to
  * anywhere - the decoding happens entirely on the user's own machine.
  */
-export async function decodeAudioFile(file: File): Promise<{ samples: Float32Array; sampleRate: number; duration: number }> {
+export async function decodeAudioFile(
+  file: File,
+): Promise<{ samples: Float32Array; sampleRate: number; duration: number }> {
   const arrayBuffer = await file.arrayBuffer();
   const audioContext = new AudioContext();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);

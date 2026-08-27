@@ -51,7 +51,10 @@ function computeSTFT(samples: Float32Array): number[][] {
   return spectra;
 }
 
-export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: number; confidence: number } {
+export function detectTempo(
+  samples: Float32Array,
+  sampleRate: number,
+): { bpm: number; confidence: number } {
   const spectra = computeSTFT(samples);
   if (spectra.length < 8) return { bpm: 0, confidence: 0 };
 
@@ -76,7 +79,8 @@ export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: n
   // lags. The lag with the strongest self-similarity IS the beat
   // period - a song's rhythm is, by definition, a pattern that
   // repeats at a consistent interval.
-  const minBpm = 60, maxBpm = 200;
+  const minBpm = 60,
+    maxBpm = 200;
   const minLag = Math.floor(frameRate * (60 / maxBpm));
   const maxLag = Math.ceil(frameRate * (60 / minBpm));
 
@@ -85,10 +89,13 @@ export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: n
   // octave relationship as well. That makes the common “70 vs 140 BPM” and
   // “64 vs 128 BPM” ambiguity much less likely than picking the single
   // loudest unnormalized peak.
-  const onsetMean = onsetEnvelope.reduce((sum, item) => sum + item, 0) / onsetEnvelope.length;
+  const onsetMean =
+    onsetEnvelope.reduce((sum, item) => sum + item, 0) / onsetEnvelope.length;
   const centered = onsetEnvelope.map((value) => value - onsetMean);
   const scoreForLag = (lag: number) => {
-    let dot = 0, firstEnergy = 0, secondEnergy = 0;
+    let dot = 0,
+      firstEnergy = 0,
+      secondEnergy = 0;
     for (let i = 0; i + lag < centered.length; i++) {
       dot += centered[i] * centered[i + lag];
       firstEnergy += centered[i] ** 2;
@@ -104,10 +111,11 @@ export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: n
 
   // Restrict to local peaks: neighboring lags are often the same tempo
   // measured one frame apart and should not count as independent choices.
-  const peaks = scores.filter((candidate, index) =>
-    candidate.score > 0 &&
-    candidate.score >= (scores[index - 1]?.score ?? -Infinity) &&
-    candidate.score >= (scores[index + 1]?.score ?? -Infinity)
+  const peaks = scores.filter(
+    (candidate, index) =>
+      candidate.score > 0 &&
+      candidate.score >= (scores[index - 1]?.score ?? -Infinity) &&
+      candidate.score >= (scores[index + 1]?.score ?? -Infinity),
   );
   const ranked = (peaks.length ? peaks : scores)
     .map((candidate) => {
@@ -117,7 +125,11 @@ export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: n
       // A gentle prior only breaks ties between octave-equivalent tempos;
       // it does not force every track toward a club tempo.
       const octavePreference = Math.exp(-Math.abs(Math.log2(bpm / 128))) * 0.06;
-      return { ...candidate, bpm, combinedScore: candidate.score + doubleScore * 0.22 + octavePreference };
+      return {
+        ...candidate,
+        bpm,
+        combinedScore: candidate.score + doubleScore * 0.22 + octavePreference,
+      };
     })
     .sort((a, b) => b.combinedScore - a.combinedScore);
 
@@ -127,17 +139,31 @@ export function detectTempo(samples: Float32Array, sampleRate: number): { bpm: n
 
   const periodicity = Math.max(0, Math.min(1, winner.score));
   const separation = runnerUp
-    ? Math.max(0, Math.min(1, (winner.combinedScore - runnerUp.combinedScore) / (Math.abs(winner.combinedScore) + 0.0001)))
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          (winner.combinedScore - runnerUp.combinedScore) /
+            (Math.abs(winner.combinedScore) + 0.0001),
+        ),
+      )
     : 1;
-  return { bpm: Math.round(winner.bpm * 10) / 10, confidence: Math.round((periodicity * 0.7 + separation * 0.3) * 100) / 100 };
+  return {
+    bpm: Math.round(winner.bpm * 10) / 10,
+    confidence: Math.round((periodicity * 0.7 + separation * 0.3) * 100) / 100,
+  };
 }
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 // Krumhansl-Kessler key profiles - published cognitive-science reference
 // data (not invented for this project), same values used in the Python version.
-const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
-const MINOR_PROFILE = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+const MAJOR_PROFILE = [
+  6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88,
+];
+const MINOR_PROFILE = [
+  6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17,
+];
 
 function frequencyToPitchClass(freq: number): number {
   if (freq <= 0) return -1;
@@ -151,7 +177,9 @@ function correlation(a: number[], b: number[]): number {
   const n = a.length;
   const meanA = a.reduce((s, v) => s + v, 0) / n;
   const meanB = b.reduce((s, v) => s + v, 0) / n;
-  let num = 0, denomA = 0, denomB = 0;
+  let num = 0,
+    denomA = 0,
+    denomB = 0;
   for (let i = 0; i < n; i++) {
     num += (a[i] - meanA) * (b[i] - meanB);
     denomA += (a[i] - meanA) ** 2;
@@ -160,7 +188,10 @@ function correlation(a: number[], b: number[]): number {
   return num / (Math.sqrt(denomA) * Math.sqrt(denomB) || 1);
 }
 
-export function detectKey(samples: Float32Array, sampleRate: number): { key: string; mode: "major" | "minor"; confidence: number } {
+export function detectKey(
+  samples: Float32Array,
+  sampleRate: number,
+): { key: string; mode: "major" | "minor"; confidence: number } {
   const spectra = computeSTFT(samples);
   const padded = nextPowerOf2(FRAME_SIZE);
   if (!spectra.length) return { key: "C", mode: "major", confidence: 0 };
@@ -202,15 +233,29 @@ export function detectKey(samples: Float32Array, sampleRate: number): { key: str
   // double-length array instead of throwing an error. Modular indexing
   // sidesteps that footgun entirely.
   for (let tonic = 0; tonic < 12; tonic++) {
-    const rotateIndex = (i: number) => ((i - tonic) % 12 + 12) % 12;
-    const majorRotated = Array.from({ length: 12 }, (_, i) => MAJOR_PROFILE[rotateIndex(i)]);
-    const minorRotated = Array.from({ length: 12 }, (_, i) => MINOR_PROFILE[rotateIndex(i)]);
+    const rotateIndex = (i: number) => (((i - tonic) % 12) + 12) % 12;
+    const majorRotated = Array.from(
+      { length: 12 },
+      (_, i) => MAJOR_PROFILE[rotateIndex(i)],
+    );
+    const minorRotated = Array.from(
+      { length: 12 },
+      (_, i) => MINOR_PROFILE[rotateIndex(i)],
+    );
 
     const majorScore = correlation(chroma, majorRotated);
     const minorScore = correlation(chroma, minorRotated);
 
-    candidates.push({ key: NOTE_NAMES[tonic], mode: "major", score: majorScore });
-    candidates.push({ key: NOTE_NAMES[tonic], mode: "minor", score: minorScore });
+    candidates.push({
+      key: NOTE_NAMES[tonic],
+      mode: "major",
+      score: majorScore,
+    });
+    candidates.push({
+      key: NOTE_NAMES[tonic],
+      mode: "minor",
+      score: minorScore,
+    });
   }
 
   candidates.sort((a, b) => b.score - a.score);

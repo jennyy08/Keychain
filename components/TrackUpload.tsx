@@ -91,7 +91,9 @@ export default function TrackUpload({
       ) : (
         <div className="flex flex-col items-center gap-2 py-4 text-center">
           <MusicNoteIcon className="w-7 h-7 text-ink-faint" />
-          <p className="text-ink-dim text-sm">Drop an audio file here, or click to browse</p>
+          <p className="text-ink-dim text-sm">
+            Drop an audio file here, or click to browse
+          </p>
           <p className="text-ink-faint text-xs">MP3 or WAV</p>
         </div>
       )}
