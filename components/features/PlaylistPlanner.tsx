@@ -19,7 +19,10 @@ function PlaylistCard({
       className={selected ? "playlist-card playlist-card--selected" : "playlist-card"}
     >
       <div>
-        <p className="saved-date">{project.occasion || "Personal playlist"}</p>
+        <p className="saved-date">
+          {(project.context ?? project.occasion) || "Personal playlist"}
+          {project.mood ? ` · ${project.mood}` : ""}
+        </p>
         <h3>{project.name}</h3>
         <p>
           {project.trackIds?.length ?? 0} tracks · {project.duration} min ·{" "}
@@ -80,6 +83,8 @@ export default function PlaylistPlanner({
   draft: {
     name: string;
     occasion: string;
+    context: string;
+    mood: string;
     duration: number;
     startEnergy: string;
     endEnergy: string;
@@ -88,6 +93,8 @@ export default function PlaylistPlanner({
     field: keyof {
       name: string;
       occasion: string;
+      context: string;
+      mood: string;
       duration: number;
       startEnergy: string;
       endEnergy: string;
@@ -115,8 +122,8 @@ export default function PlaylistPlanner({
         <span className="library-count">{playlists.length} plans</span>
       </div>
       <p className="planner-intro">
-        Create a private brief for the occasion, then add tracks from your collection in
-        the order you want to hear them.
+        Choose the setting and feel first, then add tracks from your collection in the
+        order you want to hear them.
       </p>
       <form
         className="playlist-form"
@@ -136,11 +143,39 @@ export default function PlaylistPlanner({
           />
         </label>
         <label>
-          Occasion
+          Listening context
+          <select
+            value={draft.context}
+            onChange={(event) => onDraftChange("context", event.target.value)}
+          >
+            <option>Focus</option>
+            <option>Dinner</option>
+            <option>Drive</option>
+            <option>Workout</option>
+            <option>Party</option>
+            <option>DJ set</option>
+            <option>Custom</option>
+          </select>
+        </label>
+        <label>
+          Mood
+          <select
+            value={draft.mood}
+            onChange={(event) => onDraftChange("mood", event.target.value)}
+          >
+            <option>Steady</option>
+            <option>Calm</option>
+            <option>Warm</option>
+            <option>Upbeat</option>
+            <option>High energy</option>
+          </select>
+        </label>
+        <label>
+          Optional detail
           <input
             value={draft.occasion}
             onChange={(event) => onDraftChange("occasion", event.target.value)}
-            placeholder="Dinner, run, party…"
+            placeholder="Friday rooftop, long run…"
             maxLength={60}
           />
         </label>

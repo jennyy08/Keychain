@@ -38,6 +38,8 @@ export default function HomePage() {
   const [playlistDraft, setPlaylistDraft] = useState({
     name: "",
     occasion: "",
+    context: "Focus",
+    mood: "Steady",
     duration: 90,
     startEnergy: "Easy",
     endEnergy: "Lift",
@@ -229,6 +231,8 @@ export default function HomePage() {
       createdAt: new Date().toISOString(),
       name,
       occasion: playlistDraft.occasion.trim(),
+      context: playlistDraft.context,
+      mood: playlistDraft.mood,
       duration: Math.min(600, Math.max(15, playlistDraft.duration)),
       startEnergy: playlistDraft.startEnergy,
       endEnergy: playlistDraft.endEnergy,
@@ -239,6 +243,8 @@ export default function HomePage() {
     setPlaylistDraft({
       name: "",
       occasion: "",
+      context: "Focus",
+      mood: "Steady",
       duration: 90,
       startEnergy: "Easy",
       endEnergy: "Lift",
@@ -290,16 +296,16 @@ export default function HomePage() {
       <main id="top" className="main-content">
         <section className="hero">
           <p className="eyebrow">
-            <Icon name="spark" /> Harmonic mixing assistant
+            <Icon name="spark" /> Private music planner
           </p>
           <h1>
-            Know what works
+            Build a better flow
             <br />
-            <em>before</em> you mix.
+            <em>before</em> you press play.
           </h1>
           <p className="hero-copy">
             Drop in two tracks to check their tempo, key, and harmonic compatibility.
-            Built for quick, confident decisions in the booth.
+            Plan a dinner, drive, workout, party, or DJ set with more confidence.
           </p>
         </section>
         <CompareWorkspace

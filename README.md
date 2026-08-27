@@ -1,6 +1,6 @@
 ## Keychain
 
-Keychain is a browser-based harmonic mixing helper. Add two audio files and it estimates their BPM and musical key, maps both to Camelot notation, and explains whether they are likely to mix cleanly.
+Keychain is a private, browser-based music planner. Add two audio files and it estimates their BPM and musical key, maps both to Camelot notation, and explains how naturally they flow together. Use it to plan listening sessions, parties, workouts, drives, or DJ sets from your own library.
 
 Audio is decoded and analyzed locally; files are never uploaded to a server.
 

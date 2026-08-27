@@ -32,6 +32,8 @@ export type PlaylistProject = {
   createdAt: string;
   name: string;
   occasion: string;
+  context?: string;
+  mood?: string;
   duration: number;
   startEnergy: string;
   endEnergy: string;
