@@ -25,6 +25,9 @@ export type SavedTrack = {
   id: string;
   savedAt: string;
   track: TrackResult;
+  rating?: number;
+  favorite?: boolean;
+  note?: string;
 };
 
 export type PlaylistProject = {

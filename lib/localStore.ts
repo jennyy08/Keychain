@@ -1,5 +1,6 @@
 type LocalStore<T> = {
   read: () => T[];
+  readServer: () => T[];
   subscribe: (onChange: () => void) => () => void;
   write: (items: T[]) => void;
 };
@@ -25,6 +26,10 @@ export function createLocalStore<T>(key: string): LocalStore<T> {
     return cachedItems;
   };
 
+  // Local storage is unavailable during SSR. Keeping the initial snapshot empty
+  // lets React hydrate the server markup first, then load browser-only data.
+  const readServer = () => empty;
+
   const subscribe = (onChange: () => void) => {
     const notify = (event: Event) => {
       if (event.type !== "storage" || (event as StorageEvent).key === key) {
@@ -48,5 +53,5 @@ export function createLocalStore<T>(key: string): LocalStore<T> {
     window.dispatchEvent(new Event(eventName));
   };
 
-  return { read, subscribe, write };
+  return { read, readServer, subscribe, write };
 }

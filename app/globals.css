@@ -293,6 +293,10 @@
     flex-direction: column;
     gap: 4px;
   }
+  .collection-upload-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 .playlist-planner {
   margin-top: 72px;
@@ -308,7 +312,10 @@
 }
 .playlist-form {
   display: grid;
-  grid-template-columns: 1.4fr 1.1fr 0.7fr 0.65fr 0.65fr auto;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(130px, 1fr) repeat(
+      5,
+      minmax(76px, 0.65fr)
+    ) auto;
   gap: 9px;
   align-items: end;
   padding: 16px;
@@ -369,9 +376,9 @@
   color: var(--ink-soft);
   font-size: 12px;
 }
-@media (max-width: 900px) {
+@media (max-width: 1080px) {
   .playlist-form {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .playlist-form .save-button {
     width: max-content;
@@ -414,6 +421,44 @@
   padding-top: 26px;
   border-top: 1px solid var(--line-strong);
 }
+.collection-upload-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px dashed #b8ccb9;
+  border-radius: 4px;
+  background: #f7fbf7;
+}
+.collection-upload-panel p {
+  margin: 0 0 3px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.collection-upload-panel small {
+  color: var(--ink-faint);
+  font: 10px var(--font-mono);
+}
+.collection-upload {
+  position: relative;
+  flex: none;
+  align-self: center;
+}
+.collection-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.collection-message {
+  margin: -6px 0 14px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+}
 .saved-track-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -455,6 +500,72 @@
   color: var(--ink);
   font: 700 10px var(--font-mono);
 }
+.track-details {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 11px;
+}
+.favorite-button,
+.track-note-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font: 10px var(--font-mono);
+}
+.favorite-button--active,
+.favorite-button:hover,
+.track-note-button:hover {
+  color: var(--green-dark);
+}
+.rating-control {
+  display: flex;
+  gap: 1px;
+}
+.rating-star {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #c8c6b9;
+  font-size: 14px;
+  line-height: 1;
+}
+.rating-star--active,
+.rating-star:hover {
+  color: #b87927;
+}
+.track-note-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.track-note-form label {
+  flex: 1;
+}
+.track-note-form input {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 11px var(--font-sans);
+}
+.track-note-form button {
+  padding: 7px 9px;
+  border: 1px solid var(--green);
+  border-radius: 3px;
+  background: var(--green);
+  color: #fff;
+  font: 10px var(--font-mono);
+}
+.track-note {
+  margin: 9px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.4;
+}
 @media (max-width: 640px) {
   .track-save-strip {
     align-items: flex-start;
@@ -462,6 +573,13 @@
   }
   .saved-track-list {
     grid-template-columns: 1fr;
+  }
+  .collection-upload-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .collection-upload {
+    align-self: stretch;
   }
 }
 .file-import {
@@ -562,6 +680,9 @@
   outline: 2px solid rgba(32, 101, 69, 0.16);
 }
 .save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 34px;
   padding: 0 13px;
   border: 0;
@@ -570,6 +691,7 @@
   color: #fff;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
 }
 .save-button:hover {

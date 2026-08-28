@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import type { SavedComparison, SavedTrack, TrackResult } from "@/lib/types";
 
@@ -58,10 +59,14 @@ function SavedComparisonCard({
 function SavedTrackCard({
   item,
   onDelete,
+  onUpdate,
 }: {
   item: SavedTrack;
   onDelete: () => void;
+  onUpdate: (patch: Partial<SavedTrack>) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [note, setNote] = useState(item.note ?? "");
   const date = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
@@ -82,6 +87,69 @@ function SavedTrackCard({
           </span>
           <b>{track.camelot}</b>
         </div>
+        <div className="track-details">
+          <button
+            className={
+              item.favorite
+                ? "favorite-button favorite-button--active"
+                : "favorite-button"
+            }
+            type="button"
+            aria-pressed={item.favorite}
+            onClick={() => onUpdate({ favorite: !item.favorite })}
+          >
+            {item.favorite ? "★ Favorite" : "☆ Favorite"}
+          </button>
+          <div className="rating-control" aria-label={`Rating for ${track.fileName}`}>
+            {[1, 2, 3, 4, 5].map((rating) => (
+              <button
+                key={rating}
+                type="button"
+                aria-label={`Rate ${rating} out of 5`}
+                aria-pressed={item.rating === rating}
+                className={
+                  rating <= (item.rating ?? 0)
+                    ? "rating-star rating-star--active"
+                    : "rating-star"
+                }
+                onClick={() =>
+                  onUpdate({ rating: item.rating === rating ? undefined : rating })
+                }
+              >
+                ★
+              </button>
+            ))}
+          </div>
+          <button
+            className="track-note-button"
+            type="button"
+            onClick={() => setEditing(!editing)}
+          >
+            {editing ? "Done" : item.note ? "Edit note" : "Add note"}
+          </button>
+        </div>
+        {editing && (
+          <form
+            className="track-note-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onUpdate({ note: note.trim() || undefined });
+              setEditing(false);
+            }}
+          >
+            <label>
+              <span className="sr-only">Personal note for {track.fileName}</span>
+              <input
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Great opener, save for a drive…"
+                maxLength={160}
+              />
+            </label>
+            <button type="submit">Save note</button>
+          </form>
+        )}
+        {item.note && !editing && <p className="track-note">{item.note}</p>}
       </div>
       <button
         className="icon-button"
@@ -108,6 +176,8 @@ export default function LibrarySection({
   onFilterChange,
   onDeleteComparison,
   onDeleteTrack,
+  onUpdateTrack,
+  onAddTracks,
   onImport,
   onExport,
   onSaveTracks,
@@ -124,10 +194,14 @@ export default function LibrarySection({
   onFilterChange: (filter: "all" | "compatible") => void;
   onDeleteComparison: (id: string) => void;
   onDeleteTrack: (id: string) => void;
+  onUpdateTrack: (id: string, patch: Partial<SavedTrack>) => void;
+  onAddTracks: (files: File[]) => Promise<string>;
   onImport: (file: File) => void;
   onExport: (format: "csv" | "json") => void;
   onSaveTracks: () => void;
 }) {
+  const [addingTracks, setAddingTracks] = useState(false);
+  const [collectionMessage, setCollectionMessage] = useState<string | null>(null);
   const visible = library.filter(
     (item) =>
       [
@@ -252,26 +326,60 @@ export default function LibrarySection({
           </button>
         </section>
       )}
-      {tracks.length > 0 && (
-        <section className="track-collection" aria-labelledby="track-collection-title">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">Your local collection</p>
-              <h2 id="track-collection-title">Saved tracks</h2>
-            </div>
-            <span className="library-count">{tracks.length} tracks</span>
+      <section className="track-collection" aria-labelledby="track-collection-title">
+        <div className="section-heading">
+          <div>
+            <p className="section-kicker">Your local collection</p>
+            <h2 id="track-collection-title">Saved tracks</h2>
           </div>
+          <span className="library-count">{tracks.length} tracks</span>
+        </div>
+        <div className="collection-upload-panel">
+          <div>
+            <p>Add music directly to your private collection.</p>
+            <small>Keychain reads BPM, key, and duration on this device.</small>
+          </div>
+          <label className="save-button collection-upload">
+            {addingTracks ? "Analyzing tracks…" : "Add tracks"}
+            <input
+              type="file"
+              accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"
+              multiple
+              disabled={addingTracks}
+              onChange={async (event) => {
+                const input = event.currentTarget;
+                const files = Array.from(input.files ?? []);
+                input.value = "";
+                if (!files.length) return;
+                setAddingTracks(true);
+                setCollectionMessage(await onAddTracks(files));
+                setAddingTracks(false);
+              }}
+            />
+          </label>
+        </div>
+        {collectionMessage && (
+          <p className="collection-message" role="status">
+            {collectionMessage}
+          </p>
+        )}
+        {tracks.length ? (
           <div className="saved-track-list">
             {tracks.map((item) => (
               <SavedTrackCard
                 key={item.id}
                 item={item}
                 onDelete={() => onDeleteTrack(item.id)}
+                onUpdate={(patch) => onUpdateTrack(item.id, patch)}
               />
             ))}
           </div>
-        </section>
-      )}
+        ) : (
+          <p className="empty-library">
+            Add tracks here, or save tracks from a comparison above.
+          </p>
+        )}
+      </section>
     </>
   );
 }

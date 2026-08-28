@@ -92,7 +92,8 @@ function getSuggestions(
       );
       const tempo = tempoAdjustment(currentTrack.track.bpm, item.track.bpm);
       const tempoScore = Math.max(0, 30 - Math.abs(tempo.pctChangeNeeded) * 3.75);
-      const score = (harmonic.compatible ? 70 : 0) + tempoScore;
+      const personalScore = (item.favorite ? 14 : 0) + (item.rating ?? 0) * 3;
+      const score = (harmonic.compatible ? 70 : 0) + tempoScore + personalScore;
       const tempoDetail =
         tempo.pctChangeNeeded === 0
           ? "same tempo"

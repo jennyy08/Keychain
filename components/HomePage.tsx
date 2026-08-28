@@ -48,17 +48,17 @@ export default function HomePage() {
   const library = useSyncExternalStore(
     comparisonsStore.subscribe,
     comparisonsStore.read,
-    comparisonsStore.read,
+    comparisonsStore.readServer,
   );
   const tracks = useSyncExternalStore(
     tracksStore.subscribe,
     tracksStore.read,
-    tracksStore.read,
+    tracksStore.readServer,
   );
   const playlists = useSyncExternalStore(
     playlistsStore.subscribe,
     playlistsStore.read,
-    playlistsStore.read,
+    playlistsStore.readServer,
   );
 
   const resetComparisonState = () => {
@@ -223,6 +223,57 @@ export default function HomePage() {
     updateTracks([...additions, ...tracks].slice(0, 100));
     setTracksSaved(true);
   };
+  const addTracksToCollection = async (files: File[]) => {
+    const audioFiles = files.filter(
+      (file) =>
+        file.type.startsWith("audio/") ||
+        /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name),
+    );
+    if (!audioFiles.length) return "Choose one or more audio files to add.";
+
+    const analyzed = await Promise.allSettled(
+      audioFiles.map(async (file): Promise<TrackResult> => {
+        const audio = await decodeAudioFile(file);
+        const tempo = detectTempo(audio.samples, audio.sampleRate);
+        const key = detectKey(audio.samples, audio.sampleRate);
+        return {
+          fileName: file.name,
+          bpm: tempo.bpm,
+          tempoConfidence: tempo.confidence,
+          key: key.key,
+          mode: key.mode,
+          camelot: toCamelot(key.key, key.mode),
+          keyConfidence: key.confidence,
+          duration: audio.duration,
+        };
+      }),
+    );
+    const successful = analyzed
+      .filter(
+        (result): result is PromiseFulfilledResult<TrackResult> =>
+          result.status === "fulfilled",
+      )
+      .map((result) => result.value);
+    const signature = (track: TrackResult) =>
+      [track.fileName, track.bpm, track.key, track.mode].join("|");
+    const existing = new Set(tracks.map((item) => signature(item.track)));
+    const additions = successful
+      .filter((track) => {
+        const key = signature(track);
+        if (existing.has(key)) return false;
+        existing.add(key);
+        return true;
+      })
+      .map((track) => ({
+        id: crypto.randomUUID(),
+        savedAt: new Date().toISOString(),
+        track,
+      }));
+    if (additions.length) updateTracks([...additions, ...tracks].slice(0, 100));
+    const failures = analyzed.length - successful.length;
+    const skipped = successful.length - additions.length;
+    return `${additions.length ? `Added ${additions.length} track${additions.length === 1 ? "" : "s"}.` : "No new tracks added."}${skipped ? ` ${skipped} already saved.` : ""}${failures ? ` ${failures} file${failures === 1 ? "" : "s"} couldn’t be analyzed.` : ""}`;
+  };
   const createPlaylist = () => {
     const name = playlistDraft.name.trim();
     if (!name) return;
@@ -353,6 +404,12 @@ export default function HomePage() {
             updateLibrary(library.filter((item) => item.id !== id))
           }
           onDeleteTrack={(id) => updateTracks(tracks.filter((item) => item.id !== id))}
+          onUpdateTrack={(id, patch) =>
+            updateTracks(
+              tracks.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+            )
+          }
+          onAddTracks={addTracksToCollection}
           onImport={(file) => void importLibrary(file)}
           onExport={(format) => {
             try {
