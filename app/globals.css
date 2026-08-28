@@ -33,6 +33,62 @@
   font-size: 13px;
   line-height: 1.5;
 }
+.playlist-progress {
+  margin-top: 18px;
+  padding: 13px 14px;
+  border: 1px solid #c9d9cb;
+  border-radius: 4px;
+  background: var(--paper);
+}
+.playlist-progress-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.playlist-progress-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.playlist-progress .section-kicker {
+  margin: 0;
+}
+.playlist-progress strong {
+  color: var(--ink);
+  font: 600 21px var(--font-display);
+}
+.playlist-progress small,
+.playlist-progress-heading p {
+  margin: 0;
+  color: var(--ink-faint);
+  font: 10px var(--font-mono);
+}
+.runtime-meter {
+  height: 5px;
+  margin: 10px 0 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #dce9dd;
+}
+.runtime-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+.playlist-arc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+.playlist-arc i {
+  height: 1px;
+  flex: 1;
+  background: var(--line-strong);
+}
 .playlist-editor-grid {
   display: grid;
   grid-template-columns: 1fr 1.15fr;
@@ -231,6 +287,11 @@
   }
   .available-tracks {
     max-height: 220px;
+  }
+  .playlist-progress-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 }
 .playlist-planner {

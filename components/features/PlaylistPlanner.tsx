@@ -110,6 +110,55 @@ function getSuggestions(
     .slice(0, 3);
 }
 
+function formatRuntime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.round(seconds % 60);
+  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+function PlaylistProgress({
+  project,
+  tracks,
+}: {
+  project: PlaylistProject;
+  tracks: SavedTrack[];
+}) {
+  const duration = tracks.reduce((total, item) => total + item.track.duration, 0);
+  const target = project.duration * 60;
+  const difference = target - duration;
+  const percent = Math.min(100, Math.round((duration / target) * 100));
+  const status =
+    difference > 30
+      ? `${formatRuntime(difference)} left to reach your target`
+      : difference < -30
+        ? `${formatRuntime(Math.abs(difference))} over your target`
+        : "Right on target";
+
+  return (
+    <div
+      className="playlist-progress"
+      aria-label={`Playlist runtime ${formatRuntime(duration)} of ${project.duration} minutes`}
+    >
+      <div className="playlist-progress-heading">
+        <div>
+          <span className="section-kicker">Playlist length</span>
+          <strong>{formatRuntime(duration)}</strong>
+          <small>of {project.duration}:00</small>
+        </div>
+        <p>{status}</p>
+      </div>
+      <div className="runtime-meter" aria-hidden="true">
+        <i style={{ width: `${percent}%` }} />
+      </div>
+      <div className="playlist-arc">
+        <span>Starts {project.startEnergy.toLowerCase()}</span>
+        <i />
+        <span>Ends {project.endEnergy.toLowerCase()}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function PlaylistPlanner({
   playlists,
   tracks,
@@ -284,6 +333,7 @@ export default function PlaylistPlanner({
               running order.
             </p>
           </div>
+          <PlaylistProgress project={activePlaylist} tracks={activeTracks} />
           <div className="playlist-editor-grid">
             <div>
               <h4>{activeTracks.length ? "Recommended next" : "Suggested starters"}</h4>
