@@ -10,11 +10,19 @@ type GetSongBpmSong = {
 };
 
 type GetSongBpmSearchResponse = {
-  search?: GetSongBpmSong[];
+  search?: unknown;
   error?: string;
 };
 
 const GETSONGBPM_API_URL = "https://api.getsong.co/search/";
+
+function isGetSongBpmSong(value: unknown): value is GetSongBpmSong {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    ("title" in value || "tempo" in value)
+  );
+}
 
 function normalizeText(value: string) {
   return value
@@ -88,7 +96,12 @@ export async function lookupGetSongBpmFeatures(
 
   const payload = (await response.json()) as GetSongBpmSearchResponse;
   if (payload.error) throw new Error(payload.error);
-  const bestMatch = [...(payload.search ?? [])]
+  const matches: GetSongBpmSong[] = Array.isArray(payload.search)
+    ? payload.search.filter(isGetSongBpmSong)
+    : isGetSongBpmSong(payload.search)
+      ? [payload.search]
+      : [];
+  const bestMatch = matches
     .map((song) => ({ song, score: matchScore(song, title, artist) }))
     .sort((a, b) => b.score - a.score)[0];
   if (!bestMatch || bestMatch.score < 3) return null;
