@@ -25,6 +25,7 @@ export type SavedTrack = {
   id: string;
   savedAt: string;
   track: TrackResult;
+  catalog?: CatalogTrack;
   rating?: number;
   favorite?: boolean;
   note?: string;
@@ -42,3 +43,4 @@ export type PlaylistProject = {
   endEnergy: string;
   trackIds?: string[];
 };
+import type { CatalogTrack } from "@/lib/catalog";

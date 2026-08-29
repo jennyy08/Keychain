@@ -73,20 +73,30 @@ function SavedTrackCard({
     year: "numeric",
   }).format(new Date(item.savedAt));
   const { track } = item;
+  const isCatalogTrack = Boolean(item.catalog);
+  const title = item.catalog?.title ?? track.fileName;
+  const artist = item.catalog?.artist;
   return (
     <article className="saved-track-card">
       <div>
         <p className="saved-date">{date}</p>
-        <p className="saved-track-name" title={track.fileName}>
-          {track.fileName}
+        <p className="saved-track-name" title={title}>
+          {title}
         </p>
-        <div className="saved-track-metrics">
-          <span>{track.bpm.toFixed(1)} BPM</span>
-          <span>
-            {track.key} {track.mode}
-          </span>
-          <b>{track.camelot}</b>
-        </div>
+        {artist && <p className="catalog-track-artist">{artist}</p>}
+        {isCatalogTrack ? (
+          <p className="catalog-track-status">
+            Catalog track · transition data coming next
+          </p>
+        ) : (
+          <div className="saved-track-metrics">
+            <span>{track.bpm.toFixed(1)} BPM</span>
+            <span>
+              {track.key} {track.mode}
+            </span>
+            <b>{track.camelot}</b>
+          </div>
+        )}
         <div className="track-details">
           <button
             className={

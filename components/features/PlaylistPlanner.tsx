@@ -9,6 +9,16 @@ type TrackSuggestion = {
   score: number;
 };
 
+function trackName(item: SavedTrack) {
+  return item.catalog
+    ? `${item.catalog.title} — ${item.catalog.artist}`
+    : item.track.fileName;
+}
+
+function hasTransitionData(item: SavedTrack) {
+  return item.track.bpm > 0 && item.track.camelot !== "?";
+}
+
 function PlaylistCard({
   project,
   selected,
@@ -53,6 +63,18 @@ function PlaylistCard({
 }
 
 function TransitionCue({ from, to }: { from: SavedTrack; to: SavedTrack }) {
+  if (!hasTransitionData(from) || !hasTransitionData(to)) {
+    return (
+      <li
+        className="transition-cue"
+        aria-label="Transition data is unavailable for one or both tracks"
+      >
+        <Icon name="alert" />
+        <span>Transition data pending</span>
+        <small>Add BPM and key data to score this pair</small>
+      </li>
+    );
+  }
   const harmonic = camelotCompatibility(from.track.camelot, to.track.camelot);
   const tempo = tempoAdjustment(from.track.bpm, to.track.bpm);
   const tempoLabel =
@@ -76,16 +98,23 @@ function getSuggestions(
   availableTracks: SavedTrack[],
   currentTrack?: SavedTrack,
 ): TrackSuggestion[] {
-  if (!currentTrack) {
+  if (!currentTrack || !hasTransitionData(currentTrack)) {
     return availableTracks.slice(0, 3).map((item) => ({
       item,
       score: 0,
-      detail: "A good place to begin",
+      detail: currentTrack ? "Transition data pending" : "A good place to begin",
     }));
   }
 
   return availableTracks
     .map((item) => {
+      if (!hasTransitionData(item)) {
+        return {
+          item,
+          score: (item.favorite ? 14 : 0) + (item.rating ?? 0) * 3,
+          detail: "Transition data pending",
+        };
+      }
       const harmonic = camelotCompatibility(
         currentTrack.track.camelot,
         item.track.camelot,
@@ -348,7 +377,7 @@ export default function PlaylistPlanner({
                         onSetTracks(activePlaylist.id, [...activeTrackIds, item.id])
                       }
                     >
-                      <span>{item.track.fileName}</span>
+                      <span>{trackName(item)}</span>
                       <small>{detail}</small>
                       <b>+</b>
                     </button>
@@ -366,9 +395,11 @@ export default function PlaylistPlanner({
                         onSetTracks(activePlaylist.id, [...activeTrackIds, item.id])
                       }
                     >
-                      <span>{item.track.fileName}</span>
+                      <span>{trackName(item)}</span>
                       <small>
-                        {item.track.bpm.toFixed(1)} BPM · {item.track.camelot}
+                        {hasTransitionData(item)
+                          ? `${item.track.bpm.toFixed(1)} BPM · ${item.track.camelot}`
+                          : "Catalog track"}
                       </small>
                       <b>+</b>
                     </button>
@@ -395,10 +426,11 @@ export default function PlaylistPlanner({
                       <li>
                         <span className="queue-number">{index + 1}</span>
                         <div>
-                          <b>{item.track.fileName}</b>
+                          <b>{trackName(item)}</b>
                           <small>
-                            {item.track.bpm.toFixed(1)} BPM · {item.track.key}{" "}
-                            {item.track.mode} · {item.track.camelot}
+                            {hasTransitionData(item)
+                              ? `${item.track.bpm.toFixed(1)} BPM · ${item.track.key} ${item.track.mode} · ${item.track.camelot}`
+                              : "Catalog track · transition data pending"}
                           </small>
                         </div>
                         <div className="queue-actions">

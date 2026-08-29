@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import CatalogSearch from "@/components/features/CatalogSearch";
 import CompareWorkspace from "@/components/features/CompareWorkspace";
 import LibrarySection from "@/components/features/LibrarySection";
 import MixResults from "@/components/features/MixResults";
@@ -11,6 +12,7 @@ import { camelotCompatibility, toCamelot } from "@/lib/camelot";
 import { decodeAudioFile } from "@/lib/decodeAudio";
 import { downloadComparisons, parseImportedComparisons } from "@/lib/libraryExport";
 import { comparisonsStore, playlistsStore, tracksStore } from "@/lib/localData";
+import type { CatalogTrack } from "@/lib/catalog";
 import type {
   PlaylistProject,
   SavedComparison,
@@ -274,6 +276,36 @@ export default function HomePage() {
     const skipped = successful.length - additions.length;
     return `${additions.length ? `Added ${additions.length} track${additions.length === 1 ? "" : "s"}.` : "No new tracks added."}${skipped ? ` ${skipped} already saved.` : ""}${failures ? ` ${failures} file${failures === 1 ? "" : "s"} couldn’t be analyzed.` : ""}`;
   };
+  const addCatalogTrack = (catalog: CatalogTrack) => {
+    const sourceKey = `${catalog.source}:${catalog.sourceId}`;
+    if (
+      tracks.some(
+        (item) =>
+          item.catalog &&
+          `${item.catalog.source}:${item.catalog.sourceId}` === sourceKey,
+      )
+    )
+      return;
+    updateTracks(
+      [
+        {
+          id: crypto.randomUUID(),
+          savedAt: new Date().toISOString(),
+          catalog,
+          track: {
+            fileName: catalog.title,
+            bpm: 0,
+            key: "?",
+            mode: "",
+            camelot: "?",
+            keyConfidence: 0,
+            duration: catalog.duration ?? 0,
+          },
+        },
+        ...tracks,
+      ].slice(0, 100),
+    );
+  };
   const createPlaylist = () => {
     const name = playlistDraft.name.trim();
     if (!name) return;
@@ -359,6 +391,16 @@ export default function HomePage() {
             Plan a dinner, drive, workout, party, or DJ set with more confidence.
           </p>
         </section>
+        <CatalogSearch
+          savedSourceIds={
+            new Set(
+              tracks.flatMap((item) =>
+                item.catalog ? [`${item.catalog.source}:${item.catalog.sourceId}`] : [],
+              ),
+            )
+          }
+          onAdd={addCatalogTrack}
+        />
         <CompareWorkspace
           fileA={fileA}
           fileB={fileB}
