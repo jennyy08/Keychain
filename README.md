@@ -2,6 +2,12 @@
 
 Keychain is a private, browser-based music planner. Add two audio files and it estimates their BPM and musical key, maps both to Camelot notation, and explains how naturally they flow together. Use it to plan listening sessions, parties, workouts, drives, or DJ sets from your own library.
 
+## Local setup
+
+Catalog integrations use private environment variables. Copy `.env.example` to
+`.env.local`, then add the relevant key. `.env.local` is ignored by Git and must
+never be committed.
+
 Audio is decoded and analyzed locally; files are never uploaded to a server.
 
 ## Getting started
