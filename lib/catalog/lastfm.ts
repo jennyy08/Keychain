@@ -1,4 +1,5 @@
 import type { CatalogSearchResult, CatalogTrack } from "./types";
+import { hasUsableArtwork } from "./artwork";
 
 type LastFmImage = {
   "#text"?: string;
@@ -40,9 +41,10 @@ type LastFmSimilarResponse = {
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 
 function getArtwork(images: LastFmImage[] | undefined) {
-  return [...(images ?? [])].reverse().find((image) => image["#text"]?.trim())?.[
-    "#text"
-  ];
+  const url = [...(images ?? [])]
+    .reverse()
+    .find((image) => hasUsableArtwork(image["#text"]))?.["#text"];
+  return hasUsableArtwork(url) ? url : undefined;
 }
 
 function normalizeTrack(track: LastFmTrack): CatalogTrack | null {

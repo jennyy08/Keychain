@@ -21,6 +21,7 @@ export type CatalogTrack = {
   artist: string;
   album?: string;
   artworkUrl?: string;
+  artworkStoreUrl?: string;
   duration?: number;
   externalUrl?: string;
   tags: string[];

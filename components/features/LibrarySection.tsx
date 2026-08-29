@@ -1,4 +1,6 @@
 import { useState } from "react";
+import Image from "next/image";
+import CatalogSources from "@/components/catalog/CatalogSources";
 import Icon from "@/components/ui/Icon";
 import type { SavedComparison, SavedTrack, TrackResult } from "@/lib/types";
 
@@ -84,12 +86,23 @@ function SavedTrackCard({
   const artist = item.catalog?.artist;
   return (
     <article className="saved-track-card">
+      {item.catalog && item.catalog.artworkUrl && (
+        <Image
+          className="saved-track-artwork"
+          src={item.catalog.artworkUrl}
+          alt=""
+          width={48}
+          height={48}
+          unoptimized
+        />
+      )}
       <div>
         <p className="saved-date">{date}</p>
         <p className="saved-track-name" title={title}>
           {title}
         </p>
         {artist && <p className="catalog-track-artist">{artist}</p>}
+        {item.catalog && <CatalogSources track={item.catalog} />}
         {isCatalogTrack && track.bpm <= 0 ? (
           <div className="catalog-track-data-action">
             <p className="catalog-track-status">

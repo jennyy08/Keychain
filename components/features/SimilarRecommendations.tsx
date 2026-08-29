@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import CatalogTrackList from "@/components/catalog/CatalogTrackList";
 import type { CatalogSearchResult, CatalogTrack } from "@/lib/catalog";
 
 export default function SimilarRecommendations({
@@ -12,7 +12,7 @@ export default function SimilarRecommendations({
 }: {
   seed: CatalogTrack | null;
   savedSourceIds: Set<string>;
-  onAdd: (track: CatalogTrack) => void;
+  onAdd: (track: CatalogTrack) => Promise<void>;
   onClose: () => void;
 }) {
   const [results, setResults] = useState<CatalogSearchResult | null>(null);
@@ -76,45 +76,11 @@ export default function SimilarRecommendations({
       {results && !loading && (
         <div className="catalog-results">
           {results.tracks.length ? (
-            results.tracks.map((track) => {
-              const saved = savedSourceIds.has(`${track.source}:${track.sourceId}`);
-              return (
-                <article className="catalog-result" key={track.id}>
-                  {track.artworkUrl ? (
-                    <Image
-                      src={track.artworkUrl}
-                      alt=""
-                      width={38}
-                      height={38}
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="catalog-artwork-placeholder" aria-hidden="true">
-                      ♪
-                    </span>
-                  )}
-                  <div>
-                    <h3>{track.title}</h3>
-                    <p>{track.artist}</p>
-                  </div>
-                  <div className="catalog-result-actions">
-                    {track.externalUrl && (
-                      <a href={track.externalUrl} target="_blank" rel="noreferrer">
-                        View
-                      </a>
-                    )}
-                    <button
-                      className="quiet-button"
-                      type="button"
-                      disabled={saved}
-                      onClick={() => onAdd(track)}
-                    >
-                      {saved ? "In collection" : "Add"}
-                    </button>
-                  </div>
-                </article>
-              );
-            })
+            <CatalogTrackList
+              tracks={results.tracks}
+              savedSourceIds={savedSourceIds}
+              onAdd={onAdd}
+            />
           ) : (
             <p className="empty-library">No similar songs found for this track.</p>
           )}

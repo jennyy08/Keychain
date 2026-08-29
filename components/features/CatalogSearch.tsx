@@ -1,27 +1,111 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useRef, useState } from "react";
+import CatalogTrackList from "@/components/catalog/CatalogTrackList";
 import type { CatalogSearchResult, CatalogTrack } from "@/lib/catalog";
+
+type ArtworkDetails = { artworkUrl: string; artworkStoreUrl?: string };
+type CachedArtwork = ArtworkDetails | string;
+
+function isArtworkDetails(value: CachedArtwork | undefined): value is ArtworkDetails {
+  return (
+    typeof value === "object" && value !== null && typeof value.artworkUrl === "string"
+  );
+}
 
 export default function CatalogSearch({
   savedSourceIds,
   onAdd,
 }: {
   savedSourceIds: Set<string>;
-  onAdd: (track: CatalogTrack) => void;
+  onAdd: (track: CatalogTrack) => Promise<void>;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogSearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingArtwork, setLoadingArtwork] = useState(false);
+  const searchVersion = useRef(0);
+  const enrichArtwork = async (searchResults: CatalogSearchResult, version: number) => {
+    if (version !== searchVersion.current) return;
+    const missingArtwork = searchResults.tracks.filter((track) => !track.artworkUrl);
+    if (!missingArtwork.length) return;
+
+    let cachedArtwork: Record<string, CachedArtwork> = {};
+    try {
+      cachedArtwork = JSON.parse(
+        window.localStorage.getItem("keychain-catalog-artwork-v1") ?? "{}",
+      ) as Record<string, CachedArtwork>;
+    } catch {
+      // Artwork caching is optional and must not block search.
+    }
+    if (version !== searchVersion.current) return;
+    const applyArtwork = (artworkById: Record<string, ArtworkDetails>) => {
+      setResults((current) =>
+        current
+          ? {
+              ...current,
+              tracks: current.tracks.map((track) =>
+                artworkById[track.id] ? { ...track, ...artworkById[track.id] } : track,
+              ),
+            }
+          : current,
+      );
+    };
+    const cachedForSearch = missingArtwork.reduce<Record<string, ArtworkDetails>>(
+      (artworkById, track) => {
+        const artwork = cachedArtwork[track.id];
+        if (isArtworkDetails(artwork)) artworkById[track.id] = artwork;
+        return artworkById;
+      },
+      {},
+    );
+    if (Object.keys(cachedForSearch).length) applyArtwork(cachedForSearch);
+
+    const unresolved = missingArtwork.filter(
+      (track) => !isArtworkDetails(cachedArtwork[track.id]),
+    );
+    if (!unresolved.length) return;
+    setLoadingArtwork(true);
+    try {
+      const response = await fetch("/api/catalog/artwork/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tracks: unresolved.map(({ id, title, artist }) => ({ id, title, artist })),
+        }),
+      });
+      const payload = (await response.json()) as {
+        artworkById?: Record<string, ArtworkDetails>;
+      };
+      if (version !== searchVersion.current || !response.ok || !payload.artworkById)
+        return;
+      const freshArtwork = payload.artworkById;
+      applyArtwork(freshArtwork);
+      try {
+        window.localStorage.setItem(
+          "keychain-catalog-artwork-v1",
+          JSON.stringify({ ...cachedArtwork, ...freshArtwork }),
+        );
+      } catch {
+        // The current search still has its images when local storage is unavailable.
+      }
+    } catch {
+      // Covers are optional; search results remain usable when the provider is busy.
+    } finally {
+      if (version === searchVersion.current) setLoadingArtwork(false);
+    }
+  };
   const search = async () => {
     const term = query.trim();
     if (term.length < 2) {
       setError("Enter at least two characters to search.");
       return;
     }
+    const version = searchVersion.current + 1;
+    searchVersion.current = version;
     setLoading(true);
+    setLoadingArtwork(false);
     setError(null);
     try {
       const response = await fetch(`/api/catalog/search?q=${encodeURIComponent(term)}`);
@@ -29,7 +113,9 @@ export default function CatalogSearch({
         error?: string;
       };
       if (!response.ok) throw new Error(payload.error ?? "Catalog search failed.");
+      if (version !== searchVersion.current) return;
       setResults(payload);
+      void enrichArtwork(payload, version);
     } catch (caught) {
       setResults(null);
       setError(caught instanceof Error ? caught.message : "Catalog search failed.");
@@ -76,46 +162,17 @@ export default function CatalogSearch({
       )}
       {results && (
         <div className="catalog-results">
+          {loadingArtwork && (
+            <p className="catalog-artwork-progress" role="status">
+              Finding album covers…
+            </p>
+          )}
           {results.tracks.length ? (
-            results.tracks.map((track) => {
-              const saved = savedSourceIds.has(`${track.source}:${track.sourceId}`);
-              return (
-                <article className="catalog-result" key={track.id}>
-                  {track.artworkUrl ? (
-                    <Image
-                      src={track.artworkUrl}
-                      alt=""
-                      width={38}
-                      height={38}
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="catalog-artwork-placeholder" aria-hidden="true">
-                      ♪
-                    </span>
-                  )}
-                  <div>
-                    <h3>{track.title}</h3>
-                    <p>{track.artist}</p>
-                  </div>
-                  <div className="catalog-result-actions">
-                    {track.externalUrl && (
-                      <a href={track.externalUrl} target="_blank" rel="noreferrer">
-                        View
-                      </a>
-                    )}
-                    <button
-                      className="quiet-button"
-                      type="button"
-                      disabled={saved}
-                      onClick={() => onAdd(track)}
-                    >
-                      {saved ? "In collection" : "Add"}
-                    </button>
-                  </div>
-                </article>
-              );
-            })
+            <CatalogTrackList
+              tracks={results.tracks}
+              savedSourceIds={savedSourceIds}
+              onAdd={onAdd}
+            />
           ) : (
             <p className="empty-library">No songs found. Try a more specific search.</p>
           )}

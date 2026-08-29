@@ -278,7 +278,7 @@ export default function HomePage() {
     const skipped = successful.length - additions.length;
     return `${additions.length ? `Added ${additions.length} track${additions.length === 1 ? "" : "s"}.` : "No new tracks added."}${skipped ? ` ${skipped} already saved.` : ""}${failures ? ` ${failures} file${failures === 1 ? "" : "s"} couldn’t be analyzed.` : ""}`;
   };
-  const addCatalogTrack = (catalog: CatalogTrack) => {
+  const addCatalogTrack = async (catalog: CatalogTrack) => {
     const sourceKey = `${catalog.source}:${catalog.sourceId}`;
     if (
       tracks.some(
@@ -288,20 +288,43 @@ export default function HomePage() {
       )
     )
       return;
+    let catalogWithArtwork = catalog;
+    if (!catalog.artworkUrl) {
+      try {
+        const response = await fetch("/api/catalog/artwork", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: catalog.title, artist: catalog.artist }),
+        });
+        const payload = (await response.json()) as {
+          artworkUrl?: string;
+          artworkStoreUrl?: string;
+        };
+        if (response.ok && payload.artworkUrl) {
+          catalogWithArtwork = {
+            ...catalog,
+            artworkUrl: payload.artworkUrl,
+            artworkStoreUrl: payload.artworkStoreUrl,
+          };
+        }
+      } catch {
+        // Artwork is optional; a failed fallback must not prevent saving a track.
+      }
+    }
     updateTracks(
       [
         {
           id: crypto.randomUUID(),
           savedAt: new Date().toISOString(),
-          catalog,
+          catalog: catalogWithArtwork,
           track: {
-            fileName: catalog.title,
+            fileName: catalogWithArtwork.title,
             bpm: 0,
             key: "?",
             mode: "",
             camelot: "?",
             keyConfidence: 0,
-            duration: catalog.duration ?? 0,
+            duration: catalogWithArtwork.duration ?? 0,
           },
         },
         ...tracks,
