@@ -6,3 +6,4 @@ export type {
   CatalogTrackFeatures,
   TrackFeatureSource,
 } from "./types";
+export { searchLastFmTracks } from "./lastfm";
