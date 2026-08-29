@@ -6,6 +6,7 @@ import CompareWorkspace from "@/components/features/CompareWorkspace";
 import LibrarySection from "@/components/features/LibrarySection";
 import MixResults from "@/components/features/MixResults";
 import PlaylistPlanner from "@/components/features/PlaylistPlanner";
+import SimilarRecommendations from "@/components/features/SimilarRecommendations";
 import Icon from "@/components/ui/Icon";
 import { detectKey, detectTempo } from "@/lib/audioAnalysis";
 import { camelotCompatibility, toCamelot } from "@/lib/camelot";
@@ -47,6 +48,7 @@ export default function HomePage() {
     endEnergy: "Lift",
   });
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+  const [similarSeed, setSimilarSeed] = useState<CatalogTrack | null>(null);
   const library = useSyncExternalStore(
     comparisonsStore.subscribe,
     comparisonsStore.read,
@@ -439,6 +441,18 @@ export default function HomePage() {
           }
           onAdd={addCatalogTrack}
         />
+        <SimilarRecommendations
+          seed={similarSeed}
+          savedSourceIds={
+            new Set(
+              tracks.flatMap((item) =>
+                item.catalog ? [`${item.catalog.source}:${item.catalog.sourceId}`] : [],
+              ),
+            )
+          }
+          onAdd={addCatalogTrack}
+          onClose={() => setSimilarSeed(null)}
+        />
         <CompareWorkspace
           fileA={fileA}
           fileB={fileB}
@@ -490,6 +504,7 @@ export default function HomePage() {
             )
           }
           onAddTransitionData={addTransitionData}
+          onFindSimilar={setSimilarSeed}
           onAddTracks={addTracksToCollection}
           onImport={(file) => void importLibrary(file)}
           onExport={(format) => {

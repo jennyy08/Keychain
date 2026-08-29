@@ -23,6 +23,20 @@ type LastFmSearchResponse = {
   message?: string;
 };
 
+type LastFmSimilarTrack = {
+  name?: string;
+  url?: string;
+  mbid?: string;
+  image?: LastFmImage[];
+  artist?: { name?: string };
+};
+
+type LastFmSimilarResponse = {
+  similartracks?: { track?: LastFmSimilarTrack[] | LastFmSimilarTrack };
+  error?: number;
+  message?: string;
+};
+
 const LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/";
 
 function getArtwork(images: LastFmImage[] | undefined) {
@@ -47,6 +61,20 @@ function normalizeTrack(track: LastFmTrack): CatalogTrack | null {
     externalUrl: track.url,
     tags: [],
   };
+}
+
+function normalizeSimilarTrack(track: LastFmSimilarTrack): CatalogTrack | null {
+  return normalizeTrack({
+    name: track.name,
+    artist: track.artist?.name,
+    url: track.url,
+    mbid: track.mbid,
+    image: track.image,
+  });
+}
+
+function attribution(): CatalogSearchResult["attribution"] {
+  return { label: "Data and artwork from Last.fm", url: "https://www.last.fm/" };
 }
 
 export async function searchLastFmTracks(
@@ -80,9 +108,38 @@ export async function searchLastFmTracks(
 
   return {
     tracks,
-    attribution: {
-      label: "Data and artwork from Last.fm",
-      url: "https://www.last.fm/",
-    },
+    attribution: attribution(),
+  };
+}
+
+export async function findLastFmSimilarTracks(
+  title: string,
+  artist: string,
+): Promise<CatalogSearchResult> {
+  const apiKey = process.env.LASTFM_API_KEY;
+  if (!apiKey) throw new Error("Last.fm is not configured yet.");
+
+  const params = new URLSearchParams({
+    method: "track.getsimilar",
+    track: title,
+    artist,
+    api_key: apiKey,
+    format: "json",
+    autocorrect: "1",
+    limit: "12",
+  });
+  const response = await fetch(`${LASTFM_API_URL}?${params}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Last.fm suggestions are temporarily unavailable.");
+
+  const payload = (await response.json()) as LastFmSimilarResponse;
+  if (payload.error) throw new Error(payload.message ?? "Last.fm suggestions failed.");
+  const matches = payload.similartracks?.track ?? [];
+  return {
+    tracks: (Array.isArray(matches) ? matches : [matches])
+      .map(normalizeSimilarTrack)
+      .filter((track): track is CatalogTrack => Boolean(track)),
+    attribution: attribution(),
   };
 }

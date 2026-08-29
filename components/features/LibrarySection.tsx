@@ -61,11 +61,13 @@ function SavedTrackCard({
   onDelete,
   onUpdate,
   onAddTransitionData,
+  onFindSimilar,
 }: {
   item: SavedTrack;
   onDelete: () => void;
   onUpdate: (patch: Partial<SavedTrack>) => void;
   onAddTransitionData: (item: SavedTrack) => Promise<void>;
+  onFindSimilar: (catalog: NonNullable<SavedTrack["catalog"]>) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(item.note ?? "");
@@ -131,6 +133,15 @@ function SavedTrackCard({
           </p>
         )}
         <div className="track-details">
+          {item.catalog && (
+            <button
+              className="track-note-button"
+              type="button"
+              onClick={() => onFindSimilar(item.catalog!)}
+            >
+              Find similar vibe
+            </button>
+          )}
           <button
             className={
               item.favorite
@@ -221,6 +232,7 @@ export default function LibrarySection({
   onDeleteTrack,
   onUpdateTrack,
   onAddTransitionData,
+  onFindSimilar,
   onAddTracks,
   onImport,
   onExport,
@@ -240,6 +252,7 @@ export default function LibrarySection({
   onDeleteTrack: (id: string) => void;
   onUpdateTrack: (id: string, patch: Partial<SavedTrack>) => void;
   onAddTransitionData: (item: SavedTrack) => Promise<void>;
+  onFindSimilar: (catalog: NonNullable<SavedTrack["catalog"]>) => void;
   onAddTracks: (files: File[]) => Promise<string>;
   onImport: (file: File) => void;
   onExport: (format: "csv" | "json") => void;
@@ -424,6 +437,7 @@ export default function LibrarySection({
                 onDelete={() => onDeleteTrack(item.id)}
                 onUpdate={(patch) => onUpdateTrack(item.id, patch)}
                 onAddTransitionData={onAddTransitionData}
+                onFindSimilar={onFindSimilar}
               />
             ))}
           </div>

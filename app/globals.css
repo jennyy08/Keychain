@@ -310,6 +310,16 @@
   border-radius: 5px;
   background: #f6f8f3;
 }
+.similar-recommendations {
+  margin: 26px 0;
+  padding: 22px;
+  border: 1px solid #bfd8c2;
+  border-radius: 5px;
+  background: #edf6ed;
+}
+.similar-recommendations .section-heading {
+  margin-bottom: 12px;
+}
 .catalog-search .section-heading {
   margin-bottom: 8px;
 }
