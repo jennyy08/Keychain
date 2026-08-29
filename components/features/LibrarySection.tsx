@@ -60,13 +60,17 @@ function SavedTrackCard({
   item,
   onDelete,
   onUpdate,
+  onAddTransitionData,
 }: {
   item: SavedTrack;
   onDelete: () => void;
   onUpdate: (patch: Partial<SavedTrack>) => void;
+  onAddTransitionData: (item: SavedTrack) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(item.note ?? "");
+  const [addingTransitionData, setAddingTransitionData] = useState(false);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
   const date = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
@@ -84,10 +88,34 @@ function SavedTrackCard({
           {title}
         </p>
         {artist && <p className="catalog-track-artist">{artist}</p>}
-        {isCatalogTrack ? (
-          <p className="catalog-track-status">
-            Catalog track · transition data coming next
-          </p>
+        {isCatalogTrack && track.bpm <= 0 ? (
+          <div className="catalog-track-data-action">
+            <p className="catalog-track-status">
+              Catalog track · no transition data yet
+            </p>
+            <button
+              className="quiet-button"
+              type="button"
+              disabled={addingTransitionData}
+              onClick={async () => {
+                setAddingTransitionData(true);
+                setTransitionError(null);
+                try {
+                  await onAddTransitionData(item);
+                } catch (error) {
+                  setTransitionError(
+                    error instanceof Error
+                      ? error.message
+                      : "Couldn’t add transition data.",
+                  );
+                } finally {
+                  setAddingTransitionData(false);
+                }
+              }}
+            >
+              {addingTransitionData ? "Checking…" : "Add transition data"}
+            </button>
+          </div>
         ) : (
           <div className="saved-track-metrics">
             <span>{track.bpm.toFixed(1)} BPM</span>
@@ -96,6 +124,11 @@ function SavedTrackCard({
             </span>
             <b>{track.camelot}</b>
           </div>
+        )}
+        {transitionError && (
+          <p className="catalog-track-error" role="alert">
+            {transitionError}
+          </p>
         )}
         <div className="track-details">
           <button
@@ -187,6 +220,7 @@ export default function LibrarySection({
   onDeleteComparison,
   onDeleteTrack,
   onUpdateTrack,
+  onAddTransitionData,
   onAddTracks,
   onImport,
   onExport,
@@ -205,6 +239,7 @@ export default function LibrarySection({
   onDeleteComparison: (id: string) => void;
   onDeleteTrack: (id: string) => void;
   onUpdateTrack: (id: string, patch: Partial<SavedTrack>) => void;
+  onAddTransitionData: (item: SavedTrack) => Promise<void>;
   onAddTracks: (files: File[]) => Promise<string>;
   onImport: (file: File) => void;
   onExport: (format: "csv" | "json") => void;
@@ -348,6 +383,13 @@ export default function LibrarySection({
           <div>
             <p>Add music directly to your private collection.</p>
             <small>Keychain reads BPM, key, and duration on this device.</small>
+            <small className="catalog-data-attribution">
+              Catalog transition data from{" "}
+              <a href="https://getsongbpm.com/" target="_blank" rel="noreferrer">
+                GetSongBPM
+              </a>
+              .
+            </small>
           </div>
           <label className="save-button collection-upload">
             {addingTracks ? "Analyzing tracks…" : "Add tracks"}
@@ -381,6 +423,7 @@ export default function LibrarySection({
                 item={item}
                 onDelete={() => onDeleteTrack(item.id)}
                 onUpdate={(patch) => onUpdateTrack(item.id, patch)}
+                onAddTransitionData={onAddTransitionData}
               />
             ))}
           </div>

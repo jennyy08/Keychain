@@ -425,6 +425,29 @@
   color: var(--green-dark);
   font: 10px var(--font-mono);
 }
+.catalog-track-data-action {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.catalog-track-data-action .quiet-button {
+  padding: 3px 0;
+  font: 10px var(--font-mono);
+}
+.catalog-track-error {
+  margin: 8px 0 0;
+  color: var(--red);
+  font-size: 11px;
+}
+.catalog-data-attribution {
+  display: block;
+  margin-top: 7px;
+  color: var(--ink-faint);
+}
+.catalog-data-attribution a {
+  color: inherit;
+}
 .planner-intro {
   max-width: 600px;
   margin: 0 0 18px;

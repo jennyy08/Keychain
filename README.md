@@ -6,7 +6,8 @@ Keychain is a private, browser-based music planner. Add two audio files and it e
 
 Catalog integrations use private environment variables. Copy `.env.example` to
 `.env.local`, then add the relevant key. `.env.local` is ignored by Git and must
-never be committed.
+never be committed. GetSongBPM requires an attribution link to
+[getsongbpm.com](https://getsongbpm.com/) in a deployed app.
 
 Audio is decoded and analyzed locally; files are never uploaded to a server.
 

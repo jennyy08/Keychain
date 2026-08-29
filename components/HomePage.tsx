@@ -12,7 +12,7 @@ import { camelotCompatibility, toCamelot } from "@/lib/camelot";
 import { decodeAudioFile } from "@/lib/decodeAudio";
 import { downloadComparisons, parseImportedComparisons } from "@/lib/libraryExport";
 import { comparisonsStore, playlistsStore, tracksStore } from "@/lib/localData";
-import type { CatalogTrack } from "@/lib/catalog";
+import type { CatalogTrack, CatalogTrackFeatures } from "@/lib/catalog";
 import type {
   PlaylistProject,
   SavedComparison,
@@ -306,6 +306,44 @@ export default function HomePage() {
       ].slice(0, 100),
     );
   };
+  const addTransitionData = async (item: SavedTrack) => {
+    if (!item.catalog) return;
+    const response = await fetch("/api/catalog/features", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: item.catalog.title, artist: item.catalog.artist }),
+    });
+    const payload = (await response.json()) as {
+      features?: CatalogTrackFeatures;
+      error?: string;
+    };
+    if (!response.ok || !payload.features) {
+      throw new Error(payload.error ?? "Couldn’t find transition data for this track.");
+    }
+    const { features } = payload;
+    const { bpm, key, mode, camelot } = features;
+    if (!bpm || !key || !mode || !camelot) {
+      throw new Error("The catalog response did not include enough transition data.");
+    }
+    updateTracks(
+      tracks.map((savedTrack) =>
+        savedTrack.id === item.id
+          ? {
+              ...savedTrack,
+              catalog: { ...savedTrack.catalog!, features },
+              track: {
+                ...savedTrack.track,
+                bpm,
+                key,
+                mode,
+                camelot,
+                keyConfidence: features.confidence ?? 0,
+              },
+            }
+          : savedTrack,
+      ),
+    );
+  };
   const createPlaylist = () => {
     const name = playlistDraft.name.trim();
     if (!name) return;
@@ -451,6 +489,7 @@ export default function HomePage() {
               tracks.map((item) => (item.id === id ? { ...item, ...patch } : item)),
             )
           }
+          onAddTransitionData={addTransitionData}
           onAddTracks={addTracksToCollection}
           onImport={(file) => void importLibrary(file)}
           onExport={(format) => {

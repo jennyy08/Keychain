@@ -5,6 +5,8 @@ export type TrackFeatureSource = "catalog" | "local" | "manual";
 export type CatalogTrackFeatures = {
   bpm?: number;
   key?: string;
+  camelot?: string;
+  mode?: "major" | "minor";
   energy?: number;
   danceability?: number;
   confidence?: number;
