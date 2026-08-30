@@ -369,6 +369,44 @@ export default function HomePage() {
       ),
     );
   };
+  const setManualTransitionData = (
+    item: SavedTrack,
+    { bpm, key, mode }: { bpm: number; key: string; mode: "major" | "minor" },
+  ) => {
+    const camelot = toCamelot(key, mode);
+    updateTracks(
+      tracks.map((savedTrack) =>
+        savedTrack.id === item.id
+          ? {
+              ...savedTrack,
+              catalog: savedTrack.catalog
+                ? {
+                    ...savedTrack.catalog,
+                    features: {
+                      ...savedTrack.catalog.features,
+                      bpm,
+                      key,
+                      mode,
+                      camelot,
+                      confidence: 1,
+                      source: "manual",
+                    },
+                  }
+                : undefined,
+              track: {
+                ...savedTrack.track,
+                bpm,
+                key,
+                mode,
+                camelot,
+                keyConfidence: 1,
+                manuallyVerified: true,
+              },
+            }
+          : savedTrack,
+      ),
+    );
+  };
   const createPlaylist = () => {
     const name = playlistDraft.name.trim();
     if (!name) return;
@@ -527,6 +565,7 @@ export default function HomePage() {
             )
           }
           onAddTransitionData={addTransitionData}
+          onSetManualTransitionData={setManualTransitionData}
           onFindSimilar={setSimilarSeed}
           onAddTracks={addTracksToCollection}
           onImport={(file) => void importLibrary(file)}

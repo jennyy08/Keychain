@@ -28,7 +28,6 @@ export type SavedTrack = {
   catalog?: CatalogTrack;
   rating?: number;
   favorite?: boolean;
-  note?: string;
 };
 
 export type PlaylistProject = {

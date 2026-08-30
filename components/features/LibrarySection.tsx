@@ -1,8 +1,17 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import CatalogSources from "@/components/catalog/CatalogSources";
 import Icon from "@/components/ui/Icon";
+import { toCamelot } from "@/lib/camelot";
 import type { SavedComparison, SavedTrack, TrackResult } from "@/lib/types";
+
+type ManualTransitionData = {
+  bpm: number;
+  key: string;
+  mode: "major" | "minor";
+};
+
+const MUSICAL_KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 function SavedComparisonCard({
   item,
@@ -58,23 +67,128 @@ function SavedComparisonCard({
     </article>
   );
 }
+
+function TrackActionsMenu({
+  title,
+  catalog,
+  track,
+  rating,
+  editingTransitionData,
+  onFindSimilar,
+  onEditTransitionData,
+  onRate,
+}: {
+  title: string;
+  catalog: SavedTrack["catalog"];
+  track: TrackResult;
+  rating?: number;
+  editingTransitionData: boolean;
+  onFindSimilar: () => void;
+  onEditTransitionData: () => void;
+  onRate: (rating: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="track-actions-menu" ref={menuRef}>
+      <button
+        type="button"
+        className="track-actions-trigger"
+        aria-label={`More actions for ${title}`}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        •••
+      </button>
+      {open && (
+        <div>
+          {catalog && (
+            <button
+              type="button"
+              onClick={() => {
+                onFindSimilar();
+                setOpen(false);
+              }}
+            >
+              Find similar vibe
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              onEditTransitionData();
+              setOpen(false);
+            }}
+          >
+            {editingTransitionData
+              ? "Cancel data edit"
+              : track.bpm > 0
+                ? "Correct BPM & key"
+                : "Add data manually"}
+          </button>
+          <div className="rating-control" aria-label={`Rating for ${track.fileName}`}>
+            <span>Rating</span>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-label={`Rate ${value} out of 5`}
+                aria-pressed={rating === value}
+                className={
+                  value <= (rating ?? 0)
+                    ? "rating-star rating-star--active"
+                    : "rating-star"
+                }
+                onClick={() => onRate(value)}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+          {catalog && <CatalogSources track={catalog} inline />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SavedTrackCard({
   item,
   onDelete,
   onUpdate,
   onAddTransitionData,
+  onSetManualTransitionData,
   onFindSimilar,
 }: {
   item: SavedTrack;
   onDelete: () => void;
   onUpdate: (patch: Partial<SavedTrack>) => void;
   onAddTransitionData: (item: SavedTrack) => Promise<void>;
+  onSetManualTransitionData: (item: SavedTrack, data: ManualTransitionData) => void;
   onFindSimilar: (catalog: NonNullable<SavedTrack["catalog"]>) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [note, setNote] = useState(item.note ?? "");
   const [addingTransitionData, setAddingTransitionData] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [editingTransitionData, setEditingTransitionData] = useState(false);
+  const [manualBpm, setManualBpm] = useState("");
+  const [manualKey, setManualKey] = useState("C");
+  const [manualMode, setManualMode] = useState<"major" | "minor">("major");
   const date = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
@@ -84,6 +198,22 @@ function SavedTrackCard({
   const isCatalogTrack = Boolean(item.catalog);
   const title = item.catalog?.title ?? track.fileName;
   const artist = item.catalog?.artist;
+  const dataSource = item.catalog?.features?.source;
+  const sourceLabel =
+    dataSource === "manual"
+      ? "Manual values"
+      : dataSource === "catalog"
+        ? "GetSongBPM match"
+        : track.manuallyVerified
+          ? "Manually verified"
+          : "Analyzed on this device";
+  const startEditingTransitionData = () => {
+    setManualBpm(track.bpm > 0 ? String(track.bpm) : "");
+    setManualKey(MUSICAL_KEYS.includes(track.key) ? track.key : "C");
+    setManualMode(track.mode === "minor" ? "minor" : "major");
+    setTransitionError(null);
+    setEditingTransitionData(true);
+  };
   return (
     <article className="saved-track-card">
       {item.catalog && item.catalog.artworkUrl && (
@@ -102,130 +232,147 @@ function SavedTrackCard({
           {title}
         </p>
         {artist && <p className="catalog-track-artist">{artist}</p>}
-        {item.catalog && <CatalogSources track={item.catalog} />}
-        {isCatalogTrack && track.bpm <= 0 ? (
-          <div className="catalog-track-data-action">
-            <p className="catalog-track-status">
-              Catalog track · no transition data yet
-            </p>
-            <button
-              className="quiet-button"
-              type="button"
-              disabled={addingTransitionData}
-              onClick={async () => {
-                setAddingTransitionData(true);
-                setTransitionError(null);
-                try {
-                  await onAddTransitionData(item);
-                } catch (error) {
-                  setTransitionError(
-                    error instanceof Error
-                      ? error.message
-                      : "Couldn’t add transition data.",
-                  );
-                } finally {
-                  setAddingTransitionData(false);
-                }
-              }}
-            >
-              {addingTransitionData ? "Checking…" : "Add transition data"}
-            </button>
-          </div>
-        ) : (
-          <div className="saved-track-metrics">
-            <span>{track.bpm.toFixed(1)} BPM</span>
-            <span>
-              {track.key} {track.mode}
-            </span>
-            <b>{track.camelot}</b>
-          </div>
-        )}
+        <div className="track-data-row">
+          {isCatalogTrack && track.bpm <= 0 ? (
+            <div className="catalog-track-data-action">
+              <p className="catalog-track-status">
+                Catalog track · no transition data yet
+              </p>
+              <button
+                className="quiet-button"
+                type="button"
+                disabled={addingTransitionData}
+                onClick={async () => {
+                  setAddingTransitionData(true);
+                  setTransitionError(null);
+                  try {
+                    await onAddTransitionData(item);
+                  } catch (error) {
+                    setTransitionError(
+                      error instanceof Error
+                        ? error.message
+                        : "Couldn’t add transition data.",
+                    );
+                  } finally {
+                    setAddingTransitionData(false);
+                  }
+                }}
+              >
+                {addingTransitionData ? "Checking…" : "Add transition data"}
+              </button>
+            </div>
+          ) : (
+            <div className="saved-track-metrics">
+              <span>{track.bpm.toFixed(1)} BPM</span>
+              <span>
+                {track.key} {track.mode}
+              </span>
+              <b>{track.camelot}</b>
+            </div>
+          )}
+          <TrackActionsMenu
+            title={title}
+            catalog={item.catalog}
+            track={track}
+            rating={item.rating}
+            editingTransitionData={editingTransitionData}
+            onFindSimilar={() => item.catalog && onFindSimilar(item.catalog)}
+            onEditTransitionData={() =>
+              editingTransitionData
+                ? setEditingTransitionData(false)
+                : startEditingTransitionData()
+            }
+            onRate={(rating) =>
+              onUpdate({ rating: item.rating === rating ? undefined : rating })
+            }
+          />
+        </div>
+        {track.bpm > 0 && <p className="transition-data-source">{sourceLabel}</p>}
         {transitionError && (
           <p className="catalog-track-error" role="alert">
             {transitionError}
           </p>
         )}
-        <div className="track-details">
-          {item.catalog && (
-            <button
-              className="track-note-button"
-              type="button"
-              onClick={() => onFindSimilar(item.catalog!)}
-            >
-              Find similar vibe
-            </button>
-          )}
-          <button
-            className={
-              item.favorite
-                ? "favorite-button favorite-button--active"
-                : "favorite-button"
-            }
-            type="button"
-            aria-pressed={item.favorite}
-            onClick={() => onUpdate({ favorite: !item.favorite })}
-          >
-            {item.favorite ? "★ Favorite" : "☆ Favorite"}
-          </button>
-          <div className="rating-control" aria-label={`Rating for ${track.fileName}`}>
-            {[1, 2, 3, 4, 5].map((rating) => (
-              <button
-                key={rating}
-                type="button"
-                aria-label={`Rate ${rating} out of 5`}
-                aria-pressed={item.rating === rating}
-                className={
-                  rating <= (item.rating ?? 0)
-                    ? "rating-star rating-star--active"
-                    : "rating-star"
-                }
-                onClick={() =>
-                  onUpdate({ rating: item.rating === rating ? undefined : rating })
-                }
-              >
-                ★
-              </button>
-            ))}
-          </div>
-          <button
-            className="track-note-button"
-            type="button"
-            onClick={() => setEditing(!editing)}
-          >
-            {editing ? "Done" : item.note ? "Edit note" : "Add note"}
-          </button>
-        </div>
-        {editing && (
+        {editingTransitionData && (
           <form
-            className="track-note-form"
+            className="transition-data-form"
             onSubmit={(event) => {
               event.preventDefault();
-              onUpdate({ note: note.trim() || undefined });
-              setEditing(false);
+              const bpm = Number(manualBpm);
+              if (!Number.isFinite(bpm) || bpm < 40 || bpm > 300) {
+                setTransitionError("Enter a BPM between 40 and 300.");
+                return;
+              }
+              onSetManualTransitionData(item, {
+                bpm,
+                key: manualKey,
+                mode: manualMode,
+              });
+              setEditingTransitionData(false);
+              setTransitionError(null);
             }}
           >
             <label>
-              <span className="sr-only">Personal note for {track.fileName}</span>
+              <span>BPM</span>
               <input
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Great opener, save for a drive…"
-                maxLength={160}
+                type="number"
+                min="40"
+                max="300"
+                step="0.1"
+                value={manualBpm}
+                onChange={(event) => setManualBpm(event.target.value)}
+                required
               />
             </label>
-            <button type="submit">Save note</button>
+            <label>
+              <span>Key</span>
+              <select
+                value={manualKey}
+                onChange={(event) => setManualKey(event.target.value)}
+              >
+                {MUSICAL_KEYS.map((key) => (
+                  <option key={key}>{key}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Mode</span>
+              <select
+                value={manualMode}
+                onChange={(event) =>
+                  setManualMode(event.target.value as "major" | "minor")
+                }
+              >
+                <option value="major">Major</option>
+                <option value="minor">Minor</option>
+              </select>
+            </label>
+            <output>{toCamelot(manualKey, manualMode)}</output>
+            <button type="submit">Save data</button>
           </form>
         )}
-        {item.note && !editing && <p className="track-note">{item.note}</p>}
       </div>
-      <button
-        className="icon-button"
-        type="button"
-        aria-label={`Remove ${track.fileName} from collection`}
-        onClick={onDelete}
-      >
-        <Icon name="close" />
-      </button>
+      <div className="saved-track-card-controls">
+        <button
+          className={
+            item.favorite ? "favorite-icon favorite-icon--active" : "favorite-icon"
+          }
+          type="button"
+          aria-label={item.favorite ? "Remove favorite" : "Add favorite"}
+          aria-pressed={item.favorite}
+          onClick={() => onUpdate({ favorite: !item.favorite })}
+        >
+          ★
+        </button>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label={`Remove ${track.fileName} from collection`}
+          onClick={onDelete}
+        >
+          <Icon name="close" />
+        </button>
+      </div>
     </article>
   );
 }
@@ -245,6 +392,7 @@ export default function LibrarySection({
   onDeleteTrack,
   onUpdateTrack,
   onAddTransitionData,
+  onSetManualTransitionData,
   onFindSimilar,
   onAddTracks,
   onImport,
@@ -265,6 +413,7 @@ export default function LibrarySection({
   onDeleteTrack: (id: string) => void;
   onUpdateTrack: (id: string, patch: Partial<SavedTrack>) => void;
   onAddTransitionData: (item: SavedTrack) => Promise<void>;
+  onSetManualTransitionData: (item: SavedTrack, data: ManualTransitionData) => void;
   onFindSimilar: (catalog: NonNullable<SavedTrack["catalog"]>) => void;
   onAddTracks: (files: File[]) => Promise<string>;
   onImport: (file: File) => void;
@@ -450,6 +599,7 @@ export default function LibrarySection({
                 onDelete={() => onDeleteTrack(item.id)}
                 onUpdate={(patch) => onUpdateTrack(item.id, patch)}
                 onAddTransitionData={onAddTransitionData}
+                onSetManualTransitionData={onSetManualTransitionData}
                 onFindSimilar={onFindSimilar}
               />
             ))}
