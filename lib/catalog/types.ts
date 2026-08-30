@@ -1,6 +1,6 @@
 export type CatalogSource = "lastfm" | "musicbrainz" | "getsongbpm";
 
-export type TrackFeatureSource = "catalog" | "local" | "manual";
+export type TrackFeatureSource = "catalog" | "shared" | "local" | "manual";
 
 export type CatalogTrackFeatures = {
   bpm?: number;

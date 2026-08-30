@@ -1,4 +1,5 @@
 import { lookupGetSongBpmFeatures } from "@/lib/catalog/getsongbpm";
+import { lookupSharedFeatures } from "@/lib/sharedFeatures";
 
 type FeatureRequest = { title?: unknown; artist?: unknown };
 
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
   }
 
   try {
+    const sharedFeatures = await lookupSharedFeatures(title, artist);
+    if (sharedFeatures) return Response.json({ features: sharedFeatures });
+
     const features = await lookupGetSongBpmFeatures(title, artist);
     if (!features) {
       return Response.json(

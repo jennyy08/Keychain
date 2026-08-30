@@ -202,11 +202,13 @@ function SavedTrackCard({
   const sourceLabel =
     dataSource === "manual"
       ? "Manual values"
-      : dataSource === "catalog"
-        ? "GetSongBPM match"
-        : track.manuallyVerified
-          ? "Manually verified"
-          : "Analyzed on this device";
+      : dataSource === "shared"
+        ? "Keychain verified data"
+        : dataSource === "catalog"
+          ? "GetSongBPM match"
+          : track.manuallyVerified
+            ? "Manually verified"
+            : "Analyzed on this device";
   const startEditingTransitionData = () => {
     setManualBpm(track.bpm > 0 ? String(track.bpm) : "");
     setManualKey(MUSICAL_KEYS.includes(track.key) ? track.key : "C");

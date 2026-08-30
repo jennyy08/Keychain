@@ -1,6 +1,7 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { camelotCompatibility, tempoAdjustment } from "@/lib/camelot";
+import { buildSmootherOrder } from "@/lib/playlistOrdering";
 import type { PlaylistProject, SavedTrack } from "@/lib/types";
 
 type TrackSuggestion = {
@@ -237,6 +238,10 @@ export default function PlaylistPlanner({
     .filter((item): item is SavedTrack => Boolean(item));
   const availableTracks = tracks.filter((item) => !activeTrackIds.includes(item.id));
   const suggestions = getSuggestions(availableTracks, activeTracks.at(-1));
+  const [orderPreview, setOrderPreview] = useState<{
+    playlistId: string;
+    order: ReturnType<typeof buildSmootherOrder>;
+  } | null>(null);
   return (
     <section className="playlist-planner" aria-labelledby="playlist-planner-title">
       <div className="section-heading">
@@ -363,6 +368,68 @@ export default function PlaylistPlanner({
               running order.
             </p>
           </div>
+          {activeTracks.length >= 2 && (
+            <div className="playlist-order-actions">
+              <button
+                className="quiet-button"
+                type="button"
+                onClick={() =>
+                  setOrderPreview({
+                    playlistId: activePlaylist.id,
+                    order: buildSmootherOrder(activeTracks),
+                  })
+                }
+              >
+                Preview smoother order
+              </button>
+            </div>
+          )}
+          {orderPreview?.playlistId === activePlaylist.id && (
+            <section className="playlist-order-preview" aria-live="polite">
+              <div>
+                <p className="section-kicker">Suggested order</p>
+                <p>
+                  Built from harmonic compatibility and the smallest practical BPM
+                  shifts.
+                </p>
+              </div>
+              <ol>
+                {orderPreview.order.trackIds.map((id, index) => {
+                  const item = tracks.find((track) => track.id === id);
+                  const transition = orderPreview.order.transitions[index - 1];
+                  return item ? (
+                    <Fragment key={id}>
+                      {transition && (
+                        <li className="order-preview-cue">{transition.detail}</li>
+                      )}
+                      <li className="order-preview-track">
+                        {index + 1}. {trackName(item)}
+                      </li>
+                    </Fragment>
+                  ) : null;
+                })}
+              </ol>
+              <div className="order-preview-actions">
+                <button
+                  className="save-button"
+                  type="button"
+                  onClick={() => {
+                    onSetTracks(activePlaylist.id, orderPreview.order.trackIds);
+                    setOrderPreview(null);
+                  }}
+                >
+                  Apply order
+                </button>
+                <button
+                  className="quiet-button"
+                  type="button"
+                  onClick={() => setOrderPreview(null)}
+                >
+                  Keep mine
+                </button>
+              </div>
+            </section>
+          )}
           <PlaylistProgress project={activePlaylist} tracks={activeTracks} />
           <div className="playlist-editor-grid">
             <div>

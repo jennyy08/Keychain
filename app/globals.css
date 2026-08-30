@@ -33,6 +33,45 @@
   font-size: 13px;
   line-height: 1.5;
 }
+.playlist-order-actions {
+  margin-top: 14px;
+}
+.playlist-order-preview {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid #a9c8ad;
+  border-radius: 4px;
+  background: #f7fbf7;
+}
+.playlist-order-preview > div:first-child > p:last-child {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.playlist-order-preview ol {
+  display: grid;
+  gap: 5px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+.order-preview-track {
+  padding: 7px 9px;
+  border: 1px solid #d3e0d4;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12px;
+}
+.order-preview-cue {
+  padding-left: 9px;
+  color: var(--green);
+  font: 10px var(--font-mono);
+}
+.order-preview-actions {
+  display: flex;
+  gap: 8px;
+}
 .playlist-progress {
   margin-top: 18px;
   padding: 13px 14px;
@@ -1435,6 +1474,86 @@ p {
   font-size: 17px;
   line-height: 1.65;
   margin: 0;
+}
+.admin-hero {
+  margin-bottom: 42px;
+}
+.admin-panel {
+  display: grid;
+  gap: 14px;
+  max-width: 680px;
+  padding: 22px;
+  border: 1px solid #bfd8c2;
+  border-radius: 5px;
+  background: #f6f8f3;
+}
+.admin-panel h2 {
+  margin: 0;
+  font: 600 24px var(--font-display);
+  letter-spacing: -0.03em;
+}
+.admin-panel > p {
+  margin: -6px 0 2px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.admin-panel > label,
+.admin-fields label {
+  display: grid;
+  gap: 5px;
+  color: var(--ink-soft);
+  font: 10px var(--font-mono);
+}
+.admin-panel input,
+.admin-panel select {
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px var(--font-sans);
+  padding: 8px 10px;
+}
+.admin-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.admin-fields label:first-child,
+.admin-fields label:nth-child(2),
+.admin-fields label:nth-child(3) {
+  grid-column: 1 / -1;
+}
+.admin-fields small {
+  color: var(--ink-faint);
+  font: inherit;
+}
+.admin-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.admin-panel-heading .section-kicker {
+  margin: 0 0 4px;
+}
+.admin-camelot {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.admin-camelot strong {
+  color: var(--green);
+}
+@media (max-width: 640px) {
+  .admin-fields {
+    grid-template-columns: 1fr;
+  }
+  .admin-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 .workspace,
 .results {
