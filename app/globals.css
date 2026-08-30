@@ -496,11 +496,9 @@
   font: 10px var(--font-mono);
 }
 .transition-data-form {
-  display: grid;
-  grid-template-columns:
-    minmax(70px, 0.8fr) minmax(70px, 0.8fr) minmax(84px, 1fr)
-    auto auto;
+  display: flex;
   align-items: end;
+  flex-wrap: wrap;
   gap: 7px;
   margin-top: 12px;
   padding: 10px;
@@ -510,6 +508,8 @@
 }
 .transition-data-form label {
   display: grid;
+  min-width: 72px;
+  flex: 1 1 72px;
   gap: 4px;
   color: var(--ink-faint);
   font: 9px var(--font-mono);
@@ -537,6 +537,7 @@
   background: var(--green);
   color: white;
   font: 10px var(--font-mono);
+  white-space: nowrap;
 }
 .catalog-data-attribution {
   display: block;
@@ -1357,6 +1358,25 @@ a:focus-visible {
 .brand-mark svg {
   width: 17px;
 }
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 28px;
+}
+.site-nav a {
+  padding: 7px 10px;
+  border-radius: 4px;
+  color: var(--ink-soft);
+  font: 600 12px/1 var(--font-display);
+  text-decoration: none;
+}
+.site-nav a:hover,
+.site-nav a:focus-visible {
+  background: #edf3ec;
+  color: var(--green);
+}
 .header-note {
   display: flex;
   align-items: center;
@@ -1898,6 +1918,14 @@ footer {
   .header-note {
     font-size: 0;
     gap: 0;
+  }
+  .site-nav {
+    gap: 0;
+    margin-right: 14px;
+  }
+  .site-nav a {
+    padding: 7px 8px;
+    font-size: 11px;
   }
   .header-note svg {
     width: 17px;

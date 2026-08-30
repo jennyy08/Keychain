@@ -380,9 +380,6 @@ function SavedTrackCard({
 export default function LibrarySection({
   library,
   tracks,
-  resultA,
-  resultB,
-  tracksSaved,
   query,
   filter,
   message,
@@ -397,13 +394,9 @@ export default function LibrarySection({
   onAddTracks,
   onImport,
   onExport,
-  onSaveTracks,
 }: {
   library: SavedComparison[];
   tracks: SavedTrack[];
-  resultA: TrackResult | null;
-  resultB: TrackResult | null;
-  tracksSaved: boolean;
   query: string;
   filter: "all" | "compatible";
   message: string | null;
@@ -418,7 +411,6 @@ export default function LibrarySection({
   onAddTracks: (files: File[]) => Promise<string>;
   onImport: (file: File) => void;
   onExport: (format: "csv" | "json") => void;
-  onSaveTracks: () => void;
 }) {
   const [addingTracks, setAddingTracks] = useState(false);
   const [collectionMessage, setCollectionMessage] = useState<string | null>(null);
@@ -528,22 +520,6 @@ export default function LibrarySection({
           ) : (
             <p className="empty-library">No saved comparisons match that search.</p>
           )}
-        </section>
-      )}
-      {resultA && resultB && (
-        <section className="track-save-strip">
-          <div>
-            <p className="section-kicker">Build your collection</p>
-            <p>Save these individual tracks to use in future recommendations.</p>
-          </div>
-          <button
-            className="save-button"
-            type="button"
-            disabled={tracksSaved}
-            onClick={onSaveTracks}
-          >
-            {tracksSaved ? "Tracks saved" : "Save both tracks"}
-          </button>
         </section>
       )}
       <section className="track-collection" aria-labelledby="track-collection-title">

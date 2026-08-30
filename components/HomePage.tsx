@@ -2,14 +2,13 @@
 
 import { useState, useSyncExternalStore } from "react";
 import CatalogSearch from "@/components/features/CatalogSearch";
-import CompareWorkspace from "@/components/features/CompareWorkspace";
 import LibrarySection from "@/components/features/LibrarySection";
-import MixResults from "@/components/features/MixResults";
 import PlaylistPlanner from "@/components/features/PlaylistPlanner";
 import SimilarRecommendations from "@/components/features/SimilarRecommendations";
+import Header from "@/components/Header";
 import Icon from "@/components/ui/Icon";
 import { detectKey, detectTempo } from "@/lib/audioAnalysis";
-import { camelotCompatibility, toCamelot } from "@/lib/camelot";
+import { toCamelot } from "@/lib/camelot";
 import { decodeAudioFile } from "@/lib/decodeAudio";
 import { downloadComparisons, parseImportedComparisons } from "@/lib/libraryExport";
 import { comparisonsStore, playlistsStore, tracksStore } from "@/lib/localData";
@@ -22,19 +21,6 @@ import type {
 } from "@/lib/types";
 
 export default function HomePage() {
-  const [fileA, setFileA] = useState<File | null>(null);
-  const [fileB, setFileB] = useState<File | null>(null);
-  const [resultA, setResultA] = useState<TrackResult | null>(null);
-  const [resultB, setResultB] = useState<TrackResult | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [tracksSaved, setTracksSaved] = useState(false);
-  const [showCorrections, setShowCorrections] = useState(false);
-  const [showSaveDetails, setShowSaveDetails] = useState(false);
-  const [draftTags, setDraftTags] = useState("");
-  const [draftNote, setDraftNote] = useState("");
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libraryFilter, setLibraryFilter] = useState<"all" | "compatible">("all");
   const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
@@ -65,167 +51,26 @@ export default function HomePage() {
     playlistsStore.readServer,
   );
 
-  const resetComparisonState = () => {
-    setResultA(null);
-    setResultB(null);
-    setError(null);
-    setCopied(false);
-    setSaved(false);
-    setTracksSaved(false);
-    setShowCorrections(false);
-    setShowSaveDetails(false);
-  };
   const updateLibrary = (next: SavedComparison[]) => {
     try {
       comparisonsStore.write(next);
     } catch {
-      setError("Your browser couldn’t save the comparison locally.");
+      setLibraryMessage("Your browser couldn’t save the comparison locally.");
     }
   };
   const updateTracks = (next: SavedTrack[]) => {
     try {
       tracksStore.write(next);
     } catch {
-      setError("Your browser couldn’t save the tracks locally.");
+      setLibraryMessage("Your browser couldn’t save the tracks locally.");
     }
   };
   const updatePlaylists = (next: PlaylistProject[]) => {
     try {
       playlistsStore.write(next);
     } catch {
-      setError("Your browser couldn’t save the playlist locally.");
+      setLibraryMessage("Your browser couldn’t save the playlist locally.");
     }
-  };
-  const updateFile = (track: "A" | "B", file: File | null) => {
-    if (track === "A") setFileA(file);
-    else setFileB(file);
-    resetComparisonState();
-  };
-  const reset = () => {
-    setFileA(null);
-    setFileB(null);
-    resetComparisonState();
-  };
-  const swap = () => {
-    const nextA = fileB;
-    setFileB(fileA);
-    setFileA(nextA);
-    resetComparisonState();
-  };
-  const analyze = async () => {
-    if (!fileA || !fileB) return;
-    setAnalyzing(true);
-    resetComparisonState();
-    setDraftTags("");
-    setDraftNote("");
-    try {
-      const [a, b] = await Promise.all([
-        decodeAudioFile(fileA),
-        decodeAudioFile(fileB),
-      ]);
-      const resultFor = (
-        file: File,
-        audio: Awaited<ReturnType<typeof decodeAudioFile>>,
-      ): TrackResult => {
-        const tempo = detectTempo(audio.samples, audio.sampleRate);
-        const key = detectKey(audio.samples, audio.sampleRate);
-        return {
-          fileName: file.name,
-          bpm: tempo.bpm,
-          tempoConfidence: tempo.confidence,
-          key: key.key,
-          mode: key.mode,
-          camelot: toCamelot(key.key, key.mode),
-          keyConfidence: key.confidence,
-          duration: audio.duration,
-        };
-      };
-      setResultA(resultFor(fileA, a));
-      setResultB(resultFor(fileB, b));
-    } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "We couldn’t read one of those files. Try a different audio file.",
-      );
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-  const correctResult = (track: "A" | "B", patch: Partial<TrackResult>) => {
-    const update = (result: TrackResult | null) =>
-      result
-        ? {
-            ...result,
-            ...patch,
-            camelot: toCamelot(
-              patch.key ?? result.key,
-              (patch.mode ?? result.mode) as "major" | "minor",
-            ),
-            manuallyVerified: true,
-          }
-        : null;
-    if (track === "A") setResultA(update);
-    else setResultB(update);
-    setSaved(false);
-    setTracksSaved(false);
-  };
-  const copySummary = async () => {
-    if (!resultA || !resultB) return;
-    const compatibility = camelotCompatibility(resultA.camelot, resultB.camelot);
-    try {
-      await navigator.clipboard.writeText(
-        `Keychain mix check\n${resultA.fileName}: ${resultA.bpm.toFixed(1)} BPM · ${resultA.key} ${resultA.mode} (${resultA.camelot})\n${resultB.fileName}: ${resultB.bpm.toFixed(1)} BPM · ${resultB.key} ${resultB.mode} (${resultB.camelot})\n${compatibility.reason}`,
-      );
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setError("Couldn’t copy the report. Select the results manually instead.");
-    }
-  };
-  const saveComparison = () => {
-    if (!resultA || !resultB || saved) return;
-    const compatibility = camelotCompatibility(resultA.camelot, resultB.camelot);
-    const tags = [
-      ...new Set(
-        draftTags
-          .split(",")
-          .map((tag) => tag.trim().toLowerCase())
-          .filter(Boolean),
-      ),
-    ].slice(0, 8);
-    updateLibrary(
-      [
-        {
-          id: crypto.randomUUID(),
-          savedAt: new Date().toISOString(),
-          trackA: resultA,
-          trackB: resultB,
-          compatible: compatibility.compatible,
-          reason: compatibility.reason,
-          tags,
-          note: draftNote.trim(),
-        },
-        ...library,
-      ].slice(0, 30),
-    );
-    setSaved(true);
-    setShowSaveDetails(false);
-  };
-  const saveTracks = () => {
-    if (!resultA || !resultB || tracksSaved) return;
-    const signature = (track: TrackResult) =>
-      [track.fileName, track.bpm, track.key, track.mode].join("|");
-    const existing = new Set(tracks.map((item) => signature(item.track)));
-    const additions = [resultA, resultB]
-      .filter((track) => !existing.has(signature(track)))
-      .map((track) => ({
-        id: crypto.randomUUID(),
-        savedAt: new Date().toISOString(),
-        track,
-      }));
-    updateTracks([...additions, ...tracks].slice(0, 100));
-    setTracksSaved(true);
   };
   const addTracksToCollection = async (files: File[]) => {
     const audioFiles = files.filter(
@@ -464,19 +309,7 @@ export default function HomePage() {
 
   return (
     <div className="app-shell">
-      <header className="site-header">
-        <div className="header-inner">
-          <a className="brand" href="#top" aria-label="Keychain home">
-            <span className="brand-mark">
-              <Icon name="music" />
-            </span>
-            <span>Keychain</span>
-          </a>
-          <span className="header-note">
-            <Icon name="lock" /> Analysis stays on your device
-          </span>
-        </div>
-      </header>
+      <Header />
       <main id="top" className="main-content">
         <section className="hero">
           <p className="eyebrow">
@@ -488,8 +321,8 @@ export default function HomePage() {
             <em>before</em> you press play.
           </h1>
           <p className="hero-copy">
-            Drop in two tracks to check their tempo, key, and harmonic compatibility.
-            Plan a dinner, drive, workout, party, or DJ set with more confidence.
+            Search for songs, save your starting points, and shape a playlist for a
+            dinner, drive, workout, party, or DJ set.
           </p>
         </section>
         <CatalogSearch
@@ -514,42 +347,9 @@ export default function HomePage() {
           onAdd={addCatalogTrack}
           onClose={() => setSimilarSeed(null)}
         />
-        <CompareWorkspace
-          fileA={fileA}
-          fileB={fileB}
-          analyzing={analyzing}
-          error={error}
-          onFileA={(file) => updateFile("A", file)}
-          onFileB={(file) => updateFile("B", file)}
-          onReset={reset}
-          onSwap={swap}
-          onAnalyze={() => void analyze()}
-        />
-        {resultA && resultB && (
-          <MixResults
-            resultA={resultA}
-            resultB={resultB}
-            copied={copied}
-            saved={saved}
-            showCorrections={showCorrections}
-            showSaveDetails={showSaveDetails}
-            draftTags={draftTags}
-            draftNote={draftNote}
-            onToggleCorrections={() => setShowCorrections(!showCorrections)}
-            onToggleSaveDetails={() => setShowSaveDetails(!showSaveDetails)}
-            onTagsChange={setDraftTags}
-            onNoteChange={setDraftNote}
-            onSave={saveComparison}
-            onCopy={() => void copySummary()}
-            onCorrect={correctResult}
-          />
-        )}
         <LibrarySection
           library={library}
           tracks={tracks}
-          resultA={resultA}
-          resultB={resultB}
-          tracksSaved={tracksSaved}
           query={libraryQuery}
           filter={libraryFilter}
           message={libraryMessage}
@@ -573,10 +373,9 @@ export default function HomePage() {
             try {
               downloadComparisons(library, format);
             } catch {
-              setError("Couldn’t create that export. Please try again.");
+              setLibraryMessage("Couldn’t create that export. Please try again.");
             }
           }}
-          onSaveTracks={saveTracks}
         />
         <PlaylistPlanner
           playlists={playlists}
@@ -599,25 +398,27 @@ export default function HomePage() {
           <div>
             <article>
               <span>01</span>
-              <h3>Upload locally</h3>
-              <p>Your source files never leave your browser.</p>
+              <h3>Find starting points</h3>
+              <p>Search the catalog for songs, artists, and ideas worth keeping.</p>
             </article>
             <article>
               <span>02</span>
-              <h3>Read the audio</h3>
-              <p>Tempo and key are measured from the actual waveform.</p>
+              <h3>Build your collection</h3>
+              <p>Save tracks, fill in BPM and key, and explore related directions.</p>
             </article>
             <article>
               <span>03</span>
-              <h3>Make the call</h3>
-              <p>Use Camelot compatibility and tempo range to plan the transition.</p>
+              <h3>Shape the flow</h3>
+              <p>
+                Arrange a playlist around the feeling and energy you want to create.
+              </p>
             </article>
           </div>
         </section>
       </main>
       <footer>
-        Keychain uses browser-based audio analysis. Results are a strong starting
-        point—always trust your ears.
+        Saved tracks and playlists stay in this browser. Transition data is a useful
+        starting point—always trust your ears.
       </footer>
     </div>
   );
