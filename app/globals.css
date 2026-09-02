@@ -1505,6 +1505,79 @@ p {
   color: var(--ink-soft);
   font: 10px var(--font-mono);
 }
+.admin-track-picker {
+  display: grid;
+  gap: 10px;
+}
+.admin-search-results {
+  display: grid;
+  gap: 6px;
+  max-height: 290px;
+  overflow: auto;
+}
+.admin-search-results button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #c9d9cb;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+}
+.admin-search-results button:hover {
+  border-color: var(--green);
+  background: #fff;
+}
+.admin-search-results span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.admin-search-results strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-search-results small {
+  overflow: hidden;
+  color: var(--ink-faint);
+  font: 10px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-search-results b {
+  color: var(--green);
+  font: 10px var(--font-mono);
+}
+.admin-selected-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid #b8ccb9;
+  border-radius: 4px;
+  background: #f7fbf7;
+}
+.admin-selected-track div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.admin-selected-track strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-selected-track span {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
 .admin-panel input,
 .admin-panel select {
   min-height: 40px;
@@ -1551,6 +1624,10 @@ p {
     grid-template-columns: 1fr;
   }
   .admin-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .admin-selected-track {
     align-items: flex-start;
     flex-direction: column;
   }

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { toCamelot } from "@/lib/camelot";
+import type { CatalogSearchResult, CatalogTrack } from "@/lib/catalog";
 import { supabase } from "@/lib/supabase";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -14,6 +15,11 @@ export default function AdminPage() {
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<CatalogTrack[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<CatalogTrack | null>(null);
   const [form, setForm] = useState({
     title: "",
     artist: "",
@@ -103,6 +109,46 @@ export default function AdminPage() {
       musicalKey: "C",
       mode: "major",
     });
+    setSelectedTrack(null);
+  };
+
+  const searchCatalog = async () => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchError("Enter at least two characters to search.");
+      return;
+    }
+    setSearching(true);
+    setSearchError(null);
+    try {
+      const response = await fetch(
+        `/api/catalog/search?q=${encodeURIComponent(query)}`,
+      );
+      const payload = (await response.json()) as CatalogSearchResult & {
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error ?? "Catalog search failed.");
+      setSearchResults(payload.tracks);
+    } catch (caught) {
+      setSearchResults(null);
+      setSearchError(
+        caught instanceof Error ? caught.message : "Catalog search failed.",
+      );
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const selectTrack = (track: CatalogTrack) => {
+    setSelectedTrack(track);
+    setForm((current) => ({
+      ...current,
+      title: track.title,
+      artist: track.artist,
+      album: track.album ?? "",
+    }));
+    setSearchResults(null);
+    setSearchQuery("");
   };
 
   return (
@@ -173,77 +219,131 @@ export default function AdminPage() {
               </button>
             </div>
             <p>
-              Use the song title and artist exactly as the catalog search writes them.
+              Search the catalog, choose the exact track, then publish its verified
+              data.
             </p>
-            <div className="admin-fields">
-              <label>
-                Track title
-                <input
-                  value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
-                  required
-                  maxLength={150}
-                />
-              </label>
-              <label>
-                Artist
-                <input
-                  value={form.artist}
-                  onChange={(event) => setForm({ ...form, artist: event.target.value })}
-                  required
-                  maxLength={150}
-                />
-              </label>
-              <label>
-                Album <small>optional</small>
-                <input
-                  value={form.album}
-                  onChange={(event) => setForm({ ...form, album: event.target.value })}
-                  maxLength={150}
-                />
-              </label>
-              <label>
-                BPM
-                <input
-                  type="number"
-                  min="40"
-                  max="300"
-                  step="0.1"
-                  value={form.bpm}
-                  onChange={(event) => setForm({ ...form, bpm: event.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Key
-                <select
-                  value={form.musicalKey}
-                  onChange={(event) =>
-                    setForm({ ...form, musicalKey: event.target.value })
-                  }
-                >
-                  {KEYS.map((key) => (
-                    <option key={key}>{key}</option>
+            {!selectedTrack ? (
+              <div className="admin-track-picker">
+                <div className="catalog-search-form">
+                  <label>
+                    <span className="sr-only">Search the catalog</span>
+                    <input
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Search a song or artist"
+                      maxLength={100}
+                    />
+                  </label>
+                  <button
+                    className="save-button"
+                    type="button"
+                    disabled={searching}
+                    onClick={() => void searchCatalog()}
+                  >
+                    {searching ? "Searching…" : "Search catalog"}
+                  </button>
+                </div>
+                {searchError && (
+                  <p className="catalog-message catalog-message--error" role="alert">
+                    {searchError}
+                  </p>
+                )}
+                {searchResults &&
+                  (searchResults.length ? (
+                    <div className="admin-search-results">
+                      {searchResults.map((track) => (
+                        <button
+                          type="button"
+                          key={track.id}
+                          onClick={() => selectTrack(track)}
+                        >
+                          <span>
+                            <strong>{track.title}</strong>
+                            <small>
+                              {track.artist}
+                              {track.album ? ` · ${track.album}` : ""}
+                            </small>
+                          </span>
+                          <b>Select</b>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-library">
+                      No songs found. Try a more specific search.
+                    </p>
                   ))}
-                </select>
-              </label>
-              <label>
-                Mode
-                <select
-                  value={form.mode}
-                  onChange={(event) =>
-                    setForm({ ...form, mode: event.target.value as "major" | "minor" })
-                  }
+              </div>
+            ) : (
+              <div className="admin-selected-track">
+                <div>
+                  <strong>{selectedTrack.title}</strong>
+                  <span>
+                    {selectedTrack.artist}
+                    {selectedTrack.album ? ` · ${selectedTrack.album}` : ""}
+                  </span>
+                </div>
+                <button
+                  className="quiet-button"
+                  type="button"
+                  onClick={() => setSelectedTrack(null)}
                 >
-                  <option value="major">Major</option>
-                  <option value="minor">Minor</option>
-                </select>
-              </label>
-            </div>
+                  Choose another
+                </button>
+              </div>
+            )}
+            {selectedTrack && (
+              <div className="admin-fields">
+                <label>
+                  BPM
+                  <input
+                    type="number"
+                    min="40"
+                    max="300"
+                    step="0.1"
+                    value={form.bpm}
+                    onChange={(event) => setForm({ ...form, bpm: event.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  Key
+                  <select
+                    value={form.musicalKey}
+                    onChange={(event) =>
+                      setForm({ ...form, musicalKey: event.target.value })
+                    }
+                  >
+                    {KEYS.map((key) => (
+                      <option key={key}>{key}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Mode
+                  <select
+                    value={form.mode}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        mode: event.target.value as "major" | "minor",
+                      })
+                    }
+                  >
+                    <option value="major">Major</option>
+                    <option value="minor">Minor</option>
+                  </select>
+                </label>
+              </div>
+            )}
             <p className="admin-camelot">
               Camelot: <strong>{toCamelot(form.musicalKey, form.mode)}</strong>
             </p>
-            <button className="save-button" type="submit" disabled={saving}>
+            <button
+              className="save-button"
+              type="submit"
+              disabled={saving || !selectedTrack}
+            >
               {saving ? "Publishing…" : "Publish shared data"}
             </button>
           </form>
