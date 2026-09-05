@@ -33,7 +33,32 @@
   line-height: 1.5;
 }
 .playlist-order-actions {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
   margin-top: 14px;
+}
+.playlist-anchors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.playlist-anchors label {
+  display: grid;
+  gap: 4px;
+  color: var(--ink-faint);
+  font: 9px var(--font-mono);
+}
+.playlist-anchors select {
+  max-width: 190px;
+  min-height: 31px;
+  padding: 0 6px;
+  border: 1px solid #b8ccb9;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 11px var(--font-sans);
 }
 .playlist-order-preview {
   margin-top: 16px;
@@ -393,6 +418,10 @@
 @media (max-width: 720px) {
   .playlist-editor-grid {
     grid-template-columns: 1fr;
+  }
+  .playlist-order-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
   .available-tracks {
     max-height: 220px;

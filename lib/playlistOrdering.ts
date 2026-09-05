@@ -32,12 +32,23 @@ function scoreTransition(from: SavedTrack, to: SavedTrack) {
   };
 }
 
-export function buildSmootherOrder(tracks: SavedTrack[]) {
+export function buildSmootherOrder(
+  tracks: SavedTrack[],
+  anchors: { openerTrackId?: string; closerTrackId?: string } = {},
+) {
   if (tracks.length < 2)
     return { trackIds: tracks.map((track) => track.id), transitions: [] };
 
-  const remaining = tracks.slice(1);
-  const ordered = [tracks[0]];
+  const opener =
+    tracks.find((track) => track.id === anchors.openerTrackId) ?? tracks[0];
+  const closer =
+    anchors.closerTrackId && anchors.closerTrackId !== opener.id
+      ? tracks.find((track) => track.id === anchors.closerTrackId)
+      : undefined;
+  const remaining = tracks.filter(
+    (track) => track.id !== opener.id && track.id !== closer?.id,
+  );
+  const ordered = [opener];
   const transitions: TransitionPreview[] = [];
 
   while (remaining.length) {
@@ -53,6 +64,16 @@ export function buildSmootherOrder(tracks: SavedTrack[]) {
       fromId: from.id,
       toId: next.id,
       detail: scoreTransition(from, next).detail,
+    });
+  }
+
+  if (closer) {
+    const from = ordered.at(-1)!;
+    ordered.push(closer);
+    transitions.push({
+      fromId: from.id,
+      toId: closer.id,
+      detail: scoreTransition(from, closer).detail,
     });
   }
 

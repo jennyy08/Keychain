@@ -303,7 +303,27 @@ export default function HomePage() {
   const setPlaylistTracks = (playlistId: string, trackIds: string[]) =>
     updatePlaylists(
       playlists.map((project) =>
-        project.id === playlistId ? { ...project, trackIds } : project,
+        project.id === playlistId
+          ? {
+              ...project,
+              trackIds,
+              openerTrackId: trackIds.includes(project.openerTrackId ?? "")
+                ? project.openerTrackId
+                : undefined,
+              closerTrackId: trackIds.includes(project.closerTrackId ?? "")
+                ? project.closerTrackId
+                : undefined,
+            }
+          : project,
+      ),
+    );
+  const setPlaylistAnchors = (
+    playlistId: string,
+    anchors: { openerTrackId?: string; closerTrackId?: string },
+  ) =>
+    updatePlaylists(
+      playlists.map((project) =>
+        project.id === playlistId ? { ...project, ...anchors } : project,
       ),
     );
 
@@ -392,6 +412,7 @@ export default function HomePage() {
             if (activePlaylistId === id) setActivePlaylistId(null);
           }}
           onSetTracks={setPlaylistTracks}
+          onSetAnchors={setPlaylistAnchors}
         />
         <section className="how-it-works">
           <p className="section-kicker">How it works</p>

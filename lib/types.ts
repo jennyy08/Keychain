@@ -41,5 +41,7 @@ export type PlaylistProject = {
   startEnergy: string;
   endEnergy: string;
   trackIds?: string[];
+  openerTrackId?: string;
+  closerTrackId?: string;
 };
 import type { CatalogTrack } from "@/lib/catalog";

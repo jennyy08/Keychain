@@ -201,6 +201,7 @@ export default function PlaylistPlanner({
   onOpen,
   onDelete,
   onSetTracks,
+  onSetAnchors,
 }: {
   playlists: PlaylistProject[];
   tracks: SavedTrack[];
@@ -230,6 +231,10 @@ export default function PlaylistPlanner({
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onSetTracks: (playlistId: string, trackIds: string[]) => void;
+  onSetAnchors: (
+    playlistId: string,
+    anchors: { openerTrackId?: string; closerTrackId?: string },
+  ) => void;
 }) {
   const activePlaylist =
     playlists.find((project) => project.id === activePlaylistId) ?? null;
@@ -371,13 +376,64 @@ export default function PlaylistPlanner({
           </div>
           {activeTracks.length >= 2 && (
             <div className="playlist-order-actions">
+              <div className="playlist-anchors">
+                <label>
+                  Keep first
+                  <select
+                    value={activePlaylist.openerTrackId ?? ""}
+                    onChange={(event) => {
+                      const openerTrackId = event.target.value || undefined;
+                      onSetAnchors(activePlaylist.id, {
+                        openerTrackId,
+                        closerTrackId:
+                          openerTrackId === activePlaylist.closerTrackId
+                            ? undefined
+                            : activePlaylist.closerTrackId,
+                      });
+                    }}
+                  >
+                    <option value="">Current first track</option>
+                    {activeTracks.map((track) => (
+                      <option key={track.id} value={track.id}>
+                        {trackName(track)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Keep last
+                  <select
+                    value={activePlaylist.closerTrackId ?? ""}
+                    onChange={(event) => {
+                      const closerTrackId = event.target.value || undefined;
+                      onSetAnchors(activePlaylist.id, {
+                        openerTrackId:
+                          closerTrackId === activePlaylist.openerTrackId
+                            ? undefined
+                            : activePlaylist.openerTrackId,
+                        closerTrackId,
+                      });
+                    }}
+                  >
+                    <option value="">No locked closer</option>
+                    {activeTracks.map((track) => (
+                      <option key={track.id} value={track.id}>
+                        {trackName(track)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <button
                 className="quiet-button"
                 type="button"
                 onClick={() =>
                   setOrderPreview({
                     playlistId: activePlaylist.id,
-                    order: buildSmootherOrder(activeTracks),
+                    order: buildSmootherOrder(activeTracks, {
+                      openerTrackId: activePlaylist.openerTrackId,
+                      closerTrackId: activePlaylist.closerTrackId,
+                    }),
                   })
                 }
               >
@@ -390,8 +446,8 @@ export default function PlaylistPlanner({
               <div>
                 <p className="section-kicker">Suggested order</p>
                 <p>
-                  Built from harmonic compatibility and the smallest practical BPM
-                  shifts.
+                  Built from harmonic compatibility, practical BPM shifts, and your
+                  locked first or last track.
                 </p>
               </div>
               <ol>
