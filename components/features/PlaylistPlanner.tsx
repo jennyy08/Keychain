@@ -1,5 +1,6 @@
 import { Fragment, useState } from "react";
 import Icon from "@/components/ui/Icon";
+import PlaylistHealth from "@/components/features/PlaylistHealth";
 import { camelotCompatibility, tempoAdjustment } from "@/lib/camelot";
 import { buildSmootherOrder } from "@/lib/playlistOrdering";
 import type { PlaylistProject, SavedTrack } from "@/lib/types";
@@ -431,6 +432,7 @@ export default function PlaylistPlanner({
             </section>
           )}
           <PlaylistProgress project={activePlaylist} tracks={activeTracks} />
+          <PlaylistHealth tracks={activeTracks} />
           <div className="playlist-editor-grid">
             <div>
               <h4>{activeTracks.length ? "Recommended next" : "Suggested starters"}</h4>

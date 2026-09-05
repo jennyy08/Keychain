@@ -1,0 +1,356 @@
+{
+  ".prettierrc.json": {
+    "size": 73,
+    "mtime_ns": 1787802435895985305,
+    "indexed_at_ns": 1788538882931769000,
+    "word_count": 8,
+    "hashes": {
+      ".prettierrc.json": "f14d3b68860a3ed66d7e5726e67967907c82f67f1463718fba8e1f9a22bf7949"
+    }
+  },
+  "AGENTS.md": {
+    "size": 678,
+    "mtime_ns": 1787224412000000000,
+    "indexed_at_ns": 1788538848496378000,
+    "word_count": 95,
+    "hashes": {
+      "agents.md": "a65abe7702c7d96d8f9ae2092e9f0f9ccf0835ac5b6fc2094a99dee0b7d067af"
+    }
+  },
+  "CLAUDE.md": {
+    "size": 11,
+    "mtime_ns": 1787224412000000000,
+    "indexed_at_ns": 1788538848496936000,
+    "word_count": 1,
+    "hashes": {
+      "claude.md": "1bc407b3dec76c32f03d0e5e2d064ceae04ede1709e79f8ce2383f5b4092e7a6"
+    }
+  },
+  "README.md": {
+    "size": 1020,
+    "mtime_ns": 1787966816256603678,
+    "indexed_at_ns": 1788538848497183000,
+    "word_count": 151,
+    "hashes": {
+      "readme.md": "fd3a0a869dea96034339969c36d6989accc1b906e18244e128a11ed6e5314ac8"
+    }
+  },
+  "app/admin/page.tsx": {
+    "size": 108,
+    "mtime_ns": 1788051109077994785,
+    "indexed_at_ns": 1788538834302551000,
+    "word_count": 13
+  },
+  "app/api/catalog/artwork/batch/route.ts": {
+    "size": 1818,
+    "mtime_ns": 1788042169338281703,
+    "indexed_at_ns": 1788538834302846000,
+    "word_count": 240
+  },
+  "app/api/catalog/artwork/route.ts": {
+    "size": 963,
+    "mtime_ns": 1788042122726891197,
+    "indexed_at_ns": 1788538834303091000,
+    "word_count": 135
+  },
+  "app/api/catalog/features/route.ts": {
+    "size": 1466,
+    "mtime_ns": 1788051058389774364,
+    "indexed_at_ns": 1788538834303413000,
+    "word_count": 195
+  },
+  "app/api/catalog/search/route.ts": {
+    "size": 878,
+    "mtime_ns": 1787965300029761129,
+    "indexed_at_ns": 1788538834304050000,
+    "word_count": 123
+  },
+  "app/api/catalog/similar/route.ts": {
+    "size": 793,
+    "mtime_ns": 1787971199735718869,
+    "indexed_at_ns": 1788538834304329000,
+    "word_count": 106
+  },
+  "app/compare/page.tsx": {
+    "size": 114,
+    "mtime_ns": 1788049400042494298,
+    "indexed_at_ns": 1788538834304583000,
+    "word_count": 13
+  },
+  "app/layout.tsx": {
+    "size": 432,
+    "mtime_ns": 1787802459773610535,
+    "indexed_at_ns": 1788538834304931000,
+    "word_count": 56
+  },
+  "app/page.tsx": {
+    "size": 105,
+    "mtime_ns": 1787802637345166100,
+    "indexed_at_ns": 1788538834305159000,
+    "word_count": 13
+  },
+  "components/AdminPage.tsx": {
+    "size": 11881,
+    "mtime_ns": 1788317533400447500,
+    "indexed_at_ns": 1788538834305381000,
+    "word_count": 887
+  },
+  "components/ComparePage.tsx": {
+    "size": 8434,
+    "mtime_ns": 1788049479909431182,
+    "indexed_at_ns": 1788538834305640000,
+    "word_count": 714
+  },
+  "components/CompatibilityBanner.tsx": {
+    "size": 1703,
+    "mtime_ns": 1787802459849221457,
+    "indexed_at_ns": 1788538834305888000,
+    "word_count": 154
+  },
+  "components/Header.tsx": {
+    "size": 727,
+    "mtime_ns": 1788049479981861211,
+    "indexed_at_ns": 1788538834306328000,
+    "word_count": 57
+  },
+  "components/HomePage.tsx": {
+    "size": 14354,
+    "mtime_ns": 1788049479993655196,
+    "indexed_at_ns": 1788538834306645000,
+    "word_count": 1208
+  },
+  "components/ResultCard.tsx": {
+    "size": 1449,
+    "mtime_ns": 1787802459865479265,
+    "indexed_at_ns": 1788538834306913000,
+    "word_count": 118
+  },
+  "components/TrackResultCard.tsx": {
+    "size": 1541,
+    "mtime_ns": 1787802459870546171,
+    "indexed_at_ns": 1788538834307109000,
+    "word_count": 125
+  },
+  "components/TrackUpload.tsx": {
+    "size": 2959,
+    "mtime_ns": 1787802459878159260,
+    "indexed_at_ns": 1788538834307314000,
+    "word_count": 285
+  },
+  "components/UploadZone.tsx": {
+    "size": 3040,
+    "mtime_ns": 1787802459889753039,
+    "indexed_at_ns": 1788538834307954000,
+    "word_count": 270
+  },
+  "components/catalog/CatalogSources.tsx": {
+    "size": 775,
+    "mtime_ns": 1788043947359383077,
+    "indexed_at_ns": 1788538834308144000,
+    "word_count": 71
+  },
+  "components/catalog/CatalogTrackList.tsx": {
+    "size": 1242,
+    "mtime_ns": 1788042971694019818,
+    "indexed_at_ns": 1788538834308373000,
+    "word_count": 97
+  },
+  "components/features/CatalogSearch.tsx": {
+    "size": 6630,
+    "mtime_ns": 1788042948458371223,
+    "indexed_at_ns": 1788538834308601000,
+    "word_count": 592
+  },
+  "components/features/CompareWorkspace.tsx": {
+    "size": 5018,
+    "mtime_ns": 1787803222761644329,
+    "indexed_at_ns": 1788538834308831000,
+    "word_count": 414
+  },
+  "components/features/LibrarySection.tsx": {
+    "size": 19248,
+    "mtime_ns": 1788051113366682721,
+    "indexed_at_ns": 1788538834309085000,
+    "word_count": 1330
+  },
+  "components/features/MixResults.tsx": {
+    "size": 7941,
+    "mtime_ns": 1787803222785969311,
+    "indexed_at_ns": 1788538834309407000,
+    "word_count": 592
+  },
+  "components/features/PlaylistPlanner.tsx": {
+    "size": 18972,
+    "mtime_ns": 1788050401984440649,
+    "indexed_at_ns": 1788538834309597000,
+    "word_count": 1329
+  },
+  "components/features/SaveTracksStrip.tsx": {
+    "size": 511,
+    "mtime_ns": 1788049479975794407,
+    "indexed_at_ns": 1788538834309879000,
+    "word_count": 52
+  },
+  "components/features/SimilarRecommendations.tsx": {
+    "size": 3120,
+    "mtime_ns": 1788042948503469574,
+    "indexed_at_ns": 1788538834310102000,
+    "word_count": 277
+  },
+  "components/ui/Icon.tsx": {
+    "size": 1446,
+    "mtime_ns": 1787803222842805993,
+    "indexed_at_ns": 1788538834310307000,
+    "word_count": 209
+  },
+  "eslint.config.mjs": {
+    "size": 465,
+    "mtime_ns": 1787224346000000000,
+    "indexed_at_ns": 1788538834310507000,
+    "word_count": 42
+  },
+  "lib/audioAnalysis.ts": {
+    "size": 10399,
+    "mtime_ns": 1787802459909689120,
+    "indexed_at_ns": 1788538834310629000,
+    "word_count": 1544
+  },
+  "lib/camelot.ts": {
+    "size": 2327,
+    "mtime_ns": 1787802338174774276,
+    "indexed_at_ns": 1788538834310870000,
+    "word_count": 299
+  },
+  "lib/catalog/apple.ts": {
+    "size": 1929,
+    "mtime_ns": 1788042122552457630,
+    "indexed_at_ns": 1788538834311061000,
+    "word_count": 209
+  },
+  "lib/catalog/artwork.ts": {
+    "size": 1336,
+    "mtime_ns": 1788042122635369914,
+    "indexed_at_ns": 1788538834311276000,
+    "word_count": 156
+  },
+  "lib/catalog/getsongbpm.ts": {
+    "size": 3878,
+    "mtime_ns": 1787970431035380891,
+    "indexed_at_ns": 1788538834311486000,
+    "word_count": 416
+  },
+  "lib/catalog/index.ts": {
+    "size": 200,
+    "mtime_ns": 1787965132173549457,
+    "indexed_at_ns": 1788538834312404000,
+    "word_count": 18
+  },
+  "lib/catalog/lastfm.ts": {
+    "size": 3912,
+    "mtime_ns": 1788040309829882148,
+    "indexed_at_ns": 1788538834312649000,
+    "word_count": 409
+  },
+  "lib/catalog/musicbrainz.ts": {
+    "size": 1560,
+    "mtime_ns": 1788040309680129107,
+    "indexed_at_ns": 1788538834312870000,
+    "word_count": 154
+  },
+  "lib/catalog/theaudiodb.ts": {
+    "size": 1268,
+    "mtime_ns": 1788041381003700906,
+    "indexed_at_ns": 1788538834313109000,
+    "word_count": 127
+  },
+  "lib/catalog/types.ts": {
+    "size": 918,
+    "mtime_ns": 1788051058351256553,
+    "indexed_at_ns": 1788538834313944000,
+    "word_count": 101
+  },
+  "lib/decodeAudio.ts": {
+    "size": 1235,
+    "mtime_ns": 1787802338179974682,
+    "indexed_at_ns": 1788538834314189000,
+    "word_count": 164
+  },
+  "lib/fft.ts": {
+    "size": 2726,
+    "mtime_ns": 1787802338194319854,
+    "indexed_at_ns": 1788538834314387000,
+    "word_count": 438
+  },
+  "lib/libraryExport.ts": {
+    "size": 3111,
+    "mtime_ns": 1787802331288183475,
+    "indexed_at_ns": 1788538834314551000,
+    "word_count": 293
+  },
+  "lib/localData.ts": {
+    "size": 400,
+    "mtime_ns": 1787802331251933628,
+    "indexed_at_ns": 1788538834314745000,
+    "word_count": 34
+  },
+  "lib/localStore.ts": {
+    "size": 1613,
+    "mtime_ns": 1787958124472404435,
+    "indexed_at_ns": 1788538834314989000,
+    "word_count": 203
+  },
+  "lib/playlistOrdering.ts": {
+    "size": 1950,
+    "mtime_ns": 1788050402078854410,
+    "indexed_at_ns": 1788538834315347000,
+    "word_count": 210
+  },
+  "lib/sharedFeatures.ts": {
+    "size": 1158,
+    "mtime_ns": 1788051058311074119,
+    "indexed_at_ns": 1788538834315581000,
+    "word_count": 133
+  },
+  "lib/supabase.ts": {
+    "size": 271,
+    "mtime_ns": 1788051058272880932,
+    "indexed_at_ns": 1788538834315817000,
+    "word_count": 26
+  },
+  "lib/types.ts": {
+    "size": 846,
+    "mtime_ns": 1788044011389443278,
+    "indexed_at_ns": 1788538834316019000,
+    "word_count": 97
+  },
+  "next.config.ts": {
+    "size": 129,
+    "mtime_ns": 1787802459948651817,
+    "indexed_at_ns": 1788538834316611000,
+    "word_count": 19
+  },
+  "package.json": {
+    "size": 710,
+    "mtime_ns": 1788051021874018116,
+    "indexed_at_ns": 1788538882932321000,
+    "word_count": 64,
+    "hashes": {
+      "package.json": "56f2e320e80a7996ed14115317435557b69e5fa495f82868a8745cf7f477ed33"
+    }
+  },
+  "postcss.config.mjs": {
+    "size": 94,
+    "mtime_ns": 1787224346000000000,
+    "indexed_at_ns": 1788538834317070000,
+    "word_count": 13
+  },
+  "tsconfig.json": {
+    "size": 666,
+    "mtime_ns": 1787224346000000000,
+    "indexed_at_ns": 1788538882932577000,
+    "word_count": 56,
+    "hashes": {
+      "tsconfig.json": "159ff1acf176e1a9d83c92e1132a5a9812fcbc84768f811b48ba88a5a46259a7"
+    }
+  }
+}
